@@ -1,0 +1,80 @@
+{
+	"name": "ignition-flint",
+	"displayName": "Flint for Ignition",
+	"description": "An extension to add convenience tools for working with Ignition in VS Code",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.54.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"*"
+	],
+	"main": "./out/src/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "ignition-flint.edit-script-transform",
+				"title": "Ignition-Flint: Edit Script Transform"
+			},
+			{
+				"command": "ignition-flint.edit-script-action",
+				"title": "Ignition-Flint: Edit Script Action"
+			},
+			{
+				"command": "ignition-flint.edit-custom-method",
+				"title": "Ignition-Flint: Edit Custom Method"
+			},
+			{
+				"command": "ignition-flint.edit-message-handler",
+				"title": "Ignition-Flint: Edit Message Handler"
+			},
+			{
+				"command": "ignition-flint.edit-tag-event-script",
+				"title": "Ignition-Flint: Edit Tag Event Script"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "ignition-flint.edit-script-transform",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsScriptTransform"
+				},
+				{
+					"command": "ignition-flint.edit-script-action",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsScriptAction"
+				},
+				{
+					"command": "ignition-flint.edit-custom-method",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsCustomMethod"
+				},
+				{
+					"command": "ignition-flint.edit-message-handler",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsMessageHandler"
+				},
+				{
+					"command": "ignition-flint.edit-tag-event-script",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsTagEventScript"
+				}
+			]
+		}
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.54.0",
+		"@types/glob": "^8.0.0",
+		"@types/mocha": "^10.0.0",
+		"@types/node": "16.x",
+		"eslint": "^8.26.0",
+		"glob": "^8.0.3",
+		"mocha": "^10.1.0",
+		"typescript": "^4.8.4",
+		"@vscode/test-electron": "^2.2.0"
+	}
+}
