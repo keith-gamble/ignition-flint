@@ -13,7 +13,6 @@ import{
 	removeFunctionDefinition,
 	registerCommands
 } from "./codeTypes";
-import { parse } from 'path';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -169,9 +168,16 @@ async function getLineDetails(document: vscode.TextDocument, lineNumber: number)
 	// Look at the current symbol, and get its content
 	const currentSymbol = symbolStack[symbolStack.length - 1];
 	const parentSymbol = symbolStack[symbolStack.length - 2];
-	const parentSymbolContent = document.getText(parentSymbol.range);
+	let parentSymbolContent = document.getText(parentSymbol.range);
 
-	
+	// If the parentSymbolContent contains the parentSymbol name in quotes, then it includes the JSON key. We need to remove it
+
+	if (parentSymbolContent.startsWith(`"${parentSymbol.name}"`)) {
+		// Remove the first instance of the key from the parentSymbolContent
+		let keyLength = parentSymbol.name.length + 3;
+		parentSymbolContent = parentSymbolContent.substring(keyLength);
+	}
+
 	// Parse the current symbol into an object
 	const parentSymbolObject = JSON.parse(parentSymbolContent);
 
@@ -302,7 +308,8 @@ function getLineCode(filePath: string, lineNumber: number, codeType: CodeType): 
 
 function openIgnitionCode(documentUri: vscode.Uri, lineNumber: number, codeType: CodeType) {
 	
-	const filePath = documentUri.path;
+	let filePath = documentUri.path;
+	filePath = normalizeWindowsFilePath(filePath)
 
 	// flint:transform.py?filePath=//myFolder/myFile.json&line=5
 	const uri = vscode.Uri.parse(`${URI_SCHEME}:/flint/${codeType.fileName}.py?filePath=${filePath}&line=${lineNumber}&codeType=${codeType.codeKey}`);
@@ -364,9 +371,20 @@ async function editScriptCode(document: vscode.TextDocument, codeType: CodeType)
 	openIgnitionCode(document.uri, lineNumber, codeType);
 }
 
+function normalizeWindowsFilePath(filePath: string): string {
+	if (process.platform === 'win32') {
+		// Replace the beginning slash
+		filePath = filePath.replace(/^\//, '');
+	}
+	return filePath;
+}
+
+
 function replaceLine(filePath: string, lineNumber: number, lineText: string) {
+	
+
 	// If the filePath is currently open, then replace the line in the open document
-	const openDocument = vscode.workspace.textDocuments.find(doc => doc.uri.path === filePath);
+	const openDocument = vscode.workspace.textDocuments.find(doc => normalizeWindowsFilePath(doc.uri.path) === filePath);
 	if (openDocument) {
 		
 		const line = openDocument.lineAt(lineNumber - 1);

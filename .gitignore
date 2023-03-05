@@ -9,3 +9,5 @@ tsconfig.lsif.json
 
 old
 out
+
+tmp*

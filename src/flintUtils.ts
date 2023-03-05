@@ -1,4 +1,4 @@
-import { Uri, TextDocument } from "vscode";
+import { Uri } from "vscode";
 
 const REPLACEMENT_CHARS: { [key: string]: string } = {
 	'\\': '\\\\',
@@ -52,4 +52,10 @@ export function getUriQueryParameter(uri: Uri, parameterName: string): string | 
 	}
 	
 	return parameterValue;
+}
+
+export class FlintError extends Error {
+	constructor(message: string) {
+		super(message);
+	}
 }

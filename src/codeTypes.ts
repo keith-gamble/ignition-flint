@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { FlintError } from './flintUtils';
 
 // Create the CODE type interface
 export abstract class CodeType {
@@ -122,6 +123,21 @@ export function insertFunctionDefinition(codeText: string, codeType: CodeType): 
 export function removeFunctionDefinition(codeText: string, codeType: CodeType): string {
 	// Get the code type
 	const functionDefinition = codeType.getFunctionDefinition();
+
+	if (!codeText.includes(functionDefinition)) {
+
+		vscode.window.showErrorMessage(
+			'Cannot update code with edited function definition, please reset the function definition and try again.',
+			{ title: 'Copy definition' },
+		).then((selected) => {
+			if (selected && selected.title === 'Copy definition') {
+				vscode.env.clipboard.writeText(functionDefinition);
+			}
+		});
+
+		throw new FlintError('Code text does not contain the function definition');
+	}
+
 	return codeText.replace(functionDefinition, '');
 }
 
