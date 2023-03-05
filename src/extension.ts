@@ -1,7 +1,6 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+
 import { FlintFileSystemProvider } from './flintFileSystemProvider';
 import * as flintUtils from './flintUtils';
 import{
@@ -14,13 +13,24 @@ import{
 	registerCommands
 } from "./codeTypes";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-
+/**
+ * The URI scheme used for Flint files.
+ */
 const URI_SCHEME = 'flint';
+
+/**
+ * The Flint file system provider.
+ */
 const FLINT_FS = new FlintFileSystemProvider();
+
+/**
+ * Map that keeps track of parsed JSON documents and their corresponding line number to symbol path mapping.
+ */
 const parsedJsonDocuments: Map<vscode.Uri, Map<number, string>> = new Map();
 
+/**
+ * Activates the extension.
+ */
 export function activate(context: vscode.ExtensionContext) {
 	// Create an output channel for showing the user data about the extension
 	const outputChannel = vscode.window.createOutputChannel('Ignition Flint');
@@ -47,12 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
 		textSelectionHandle = setTimeout(() => checkSelectionForScripts(), 100);
 	}));
 
-
-	// After the symbols in the document have been created, parse all open documents
-
-
-
-	// // Record any open documents
+	// Record any open documents
 	context.subscriptions.push(vscode.workspace.onDidOpenTextDocument((document) => {
 		// If the document is a json file, add it to the open documents
 		if (document.languageId === 'json') {
@@ -80,36 +85,40 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}));
 
-
 	// Watch for the temporary FlintFS document to be saved, and then fire a command to update the original document
 	vscode.workspace.onDidSaveTextDocument(updateEditedCode);
 }
 
-// Define a function that takes a document and returns a mapping from line numbers
-// to symbol paths
+/**
+ * Creates a mapping from line numbers to symbol paths for the given document.
+ * 
+ * @param document The document to create the mapping for.
+ */
 async function createLineNumberToSymbolPathMapping(document: vscode.TextDocument) {
 	// Create a new empty map
 	const mapping = new Map<number, string>();
   
 	// Retrieve the document symbols for the given document
-	const symbols: vscode.DocumentSymbol[] = (await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as vscode.DocumentSymbol[];
-	
+	const symbols: vscode.DocumentSymbol[] = (await vscode.commands.executeCommand(
+	  'vscode.executeDocumentSymbolProvider',
+	  document.uri
+	)) as vscode.DocumentSymbol[];
+  
 	// If symbols is empty, return an empty map
 	if (!symbols) {
-		parsedJsonDocuments.set(document.uri, mapping);
-		return;
+	  parsedJsonDocuments.set(document.uri, mapping);
+	  return;
 	}
-
-	// Define a helper function that traverses the symbol tree and updates the
-	// mapping
-	function traverseSymbolTree(
-	  symbols: vscode.DocumentSymbol[],
-	  parentPath: string
-	): void {
+  
+	/**
+	 * Define a helper function that traverses the symbol tree and updates the mapping.
+	 * @param symbols The symbols to traverse.
+	 * @param parentPath The parent path of the symbols to traverse.
+	 */
+	function traverseSymbolTree(symbols: vscode.DocumentSymbol[], parentPath: string): void {
 	  // Loop over the symbols
 	  for (const symbol of symbols) {
-		// Update the current symbol path by adding the symbol name to the
-		// parent path
+		// Update the current symbol path by adding the symbol name to the parent path
 		// If the parent path is empty, just use the symbol name
 		const currentPath = parentPath ? `${parentPath}.${symbol.name}` : symbol.name;
   
@@ -124,43 +133,55 @@ async function createLineNumberToSymbolPathMapping(document: vscode.TextDocument
 		traverseSymbolTree(symbol.children, currentPath);
 	  }
 	}
-
+  
 	// Start traversing the symbol tree from the root symbols
 	traverseSymbolTree(symbols, '');
-
+  
 	// Add the mapping to the parsedJsonDocuments
 	parsedJsonDocuments.set(document.uri, mapping);
-}
+  }
+  
 
+/**
+ * Get the stack of symbols that contain a given line number.
+ * @param symbols The symbols to search through.
+ * @param lineNumber The line number to find symbols for.
+ * @returns An array of symbols representing the path to the symbol that contains the given line number.
+ */
 function getSymbolStack(symbols: vscode.DocumentSymbol[], lineNumber: number): vscode.DocumentSymbol[] | undefined {
 	// Recursively search through all symbols and symbol children to find the symbol that contains the line number
 	for (let i = 0; i < symbols.length; i++) {
-		const symbol = symbols[i];
-		if (symbol.range.start.line <= lineNumber && symbol.range.end.line >= lineNumber) {
-			// If the symbol contains the line number, check if it has children
-			if (symbol.children) {
-				// If it has children, check if any of them contain the line number
-				const childSymbol = getSymbolStack(symbol.children, lineNumber);
-				if (childSymbol) {
-					// If a child symbol contains the line number, return it
-					return [symbol, ...childSymbol];
-				} else {
-					// If no child symbol contains the line number, return the parent symbol
-					return [symbol];
-				}
-			} else {
-				// If the symbol doesn't have children, return it
-				return [symbol];
-			}
+	  const symbol = symbols[i];
+	  if (symbol.range.start.line <= lineNumber && symbol.range.end.line >= lineNumber) {
+		// If the symbol contains the line number, check if it has children
+		if (symbol.children) {
+		  // If it has children, check if any of them contain the line number
+		  const childSymbol = getSymbolStack(symbol.children, lineNumber);
+		  if (childSymbol) {
+			// If a child symbol contains the line number, return it
+			return [symbol, ...childSymbol];
+		  } else {
+			// If no child symbol contains the line number, return the parent symbol
+			return [symbol];
+		  }
+		} else {
+		  // If the symbol doesn't have children, return it
+		  return [symbol];
 		}
+	  }
 	}
-}
+  }
 
-async function getLineDetails(document: vscode.TextDocument, lineNumber: number): 
-	Promise<{ symbol: vscode.DocumentSymbol, symbolStack: vscode.DocumentSymbol[], symbolPath: string, symbolParent: vscode.DocumentSymbol[] }> {
-	// TODO: After document parsing is re-enabled, use the document symbols to find the line key
+/**
+ * Returns details about the symbol on a given line in a given document.
+ * @param document The document to get details from.
+ * @param lineNumber The line number to get details for.
+ * @returns A promise that resolves to an object containing the symbol, symbolStack, symbolPath, and parentObject.
+ */
+async function getLineDetails(document: vscode.TextDocument, lineNumber: number): Promise<{ symbol: vscode.DocumentSymbol, symbolStack: vscode.DocumentSymbol[], symbolPath: string, parentObject: object }> {
+	// Get all document symbols
 	const symbols: vscode.DocumentSymbol[] = (await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as vscode.DocumentSymbol[];
-	
+
 	// Recursively search through each symbol to find the one that matches the current line number
 	// Each symbol will contain more symbols, so we need to recursively search through them
 	const symbolStack = getSymbolStack(symbols, lineNumber) as vscode.DocumentSymbol[];
@@ -171,7 +192,6 @@ async function getLineDetails(document: vscode.TextDocument, lineNumber: number)
 	let parentSymbolContent = document.getText(parentSymbol.range);
 
 	// If the parentSymbolContent contains the parentSymbol name in quotes, then it includes the JSON key. We need to remove it
-
 	if (parentSymbolContent.startsWith(`"${parentSymbol.name}"`)) {
 		// Remove the first instance of the key from the parentSymbolContent
 		let keyLength = parentSymbol.name.length + 3;
@@ -183,22 +203,19 @@ async function getLineDetails(document: vscode.TextDocument, lineNumber: number)
 
 	const symbolPath = symbolStack.map((s) => s.name).join('.');
 
-	return { symbol: currentSymbol, symbolStack: symbolStack, symbolPath: symbolPath, symbolParent: parentSymbolObject };
+	return { symbol: currentSymbol, symbolStack: symbolStack, symbolPath: symbolPath, parentObject: parentSymbolObject };
 }
 
-
-// function parseDocument(document) {
-// 	if (document.languageId !== 'json') {
-// 		return;
-// 	}
-
-
-// 	openDocuments[document.fileName] = { jsonLines: parse(document.getText())};
-// }
-
-// This method is called when your extension is deactivated
+/**
+ * This method is called when the extension is deactivated.
+ */
 export function deactivate() { }
 
+/**
+ * Provides code actions for the given document.
+ * @param document The document to provide code actions for.
+ * @returns A promise that resolves to an array of code actions.
+ */
 async function provideCodeActions(document: vscode.TextDocument): Promise<vscode.CodeAction[]> {
 	// Get the current line of text
 	const editor = vscode.window.activeTextEditor;
@@ -218,32 +235,48 @@ async function provideCodeActions(document: vscode.TextDocument): Promise<vscode
 	}
 
 	return [codeType.getCodeAction(document)];
-
 }
 
+/**
+ * Sets the code context for the given CodeType. This means that the context key
+ * for the code type is set to true, while all other context keys for the other
+ * code types are set to false.
+ * @param codeTypeArg The CodeType to set the context for.
+ */
 function setCodeContext(codeTypeArg: CodeType) {
+	// Loop through all code types and execute the setContext command for each one
 	for (let codeType of codeTypeMap.values()) {
 		vscode.commands.executeCommand('setContext', codeType.contextKey, codeType === codeTypeArg);
 	}
 }
 
+/**
+ * Sets the code context based on the given line number and document editor. This
+ * function retrieves the symbol path for the given line number, finds the CodeType
+ * for the symbol path, and sets the code context for that CodeType.
+ * @param editor The VS Code editor instance.
+ * @param lineNumber The line number to set the code context for.
+ */
 async function setCodeContextFromLineNumber(editor: vscode.TextEditor, lineNumber: number) {
 	// Get the parsed line key for the current line
 	const { symbolPath } = await getLineDetails(editor.document, lineNumber);
 
+	// Get the code type from the symbol path and set the context for it
 	let lineCodeType = getCodeTypeFromPath(symbolPath);
 	setCodeContext(lineCodeType as CodeType);
 }
 
-
+/**
+ * Checks the current selection in the editor to see if it corresponds to a
+ * script, and sets the code context accordingly. This function is debounced
+ * to run at most once every 100ms to prevent excessive calls.
+ */
 async function checkSelectionForScripts(): Promise<void> {
-	// Get the current line of text
+	// Get the current editor
 	const editor = vscode.window.activeTextEditor as vscode.TextEditor;
 
-	if (!editor) {
-		return;
-	}
-	if (editor.document.languageId !== 'json') {
+	// If there is no editor, or the document is not a JSON file, return
+	if (!editor || editor.document.languageId !== 'json') {
 		return;
 	}
 
@@ -252,39 +285,58 @@ async function checkSelectionForScripts(): Promise<void> {
 		createLineNumberToSymbolPathMapping(editor.document);
 	}
 
-	
+	// Set the code context based on the current selection
 	const line = editor.selection.active.line;
 	setCodeContextFromLineNumber(editor, line);
 }
 
+
+/**
+ * Returns the active line number of the current document or `undefined` if no document is active.
+ * @returns The active line number or `undefined`.
+ */
 function getLineNumberFromActiveDocument(): number | undefined {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
 		return undefined;
 	}
 
-	let lineNumber = editor.selection.active.line + 1;
+	let lineNumber = editor.selection.active.line;
 	return lineNumber;
 }
 
+
+/**
+ * Returns the line at a specified line number in a file path.
+ * @param filePath The file path.
+ * @param lineNumber The line number.
+ * @returns The line at the specified line number in the file.
+ */
 function getLine(filePath: string, lineNumber: number): string {
 	// If the filePath is currently open, get the line from the editor
 	const editor = vscode.window.visibleTextEditors.find((editor) => editor.document.fileName === filePath);
 	if (editor) {
-		return editor.document.lineAt(lineNumber - 1).text;
+		return editor.document.lineAt(lineNumber).text;
 	}
 
-	let text = fs.readFileSync(filePath, 'utf8');
+	const text = fs.readFileSync(filePath, 'utf8');
 
 	// Split the file into lines
 	const lines = text.split('\n');
 
 	// Get the line of code
-	return lines[lineNumber - 1];
+	return lines[lineNumber];
 }
 
 
-// CodeType implements flintUtils.CodeType
+
+/**
+ * Returns the code of a specified `CodeType` from a line number in a file path.
+ * @param filePath The file path.
+ * @param lineNumber The line number.
+ * @param codeType The `CodeType` to get the code for.
+ * @returns The code of the specified `CodeType` at the specified line number in the file.
+ */
 function getLineCode(filePath: string, lineNumber: number, codeType: CodeType): string {
 
 	const line = getLine(filePath, lineNumber);
@@ -304,30 +356,47 @@ function getLineCode(filePath: string, lineNumber: number, codeType: CodeType): 
 	return codeMatch[1];
 }
 
-
-
-function openIgnitionCode(documentUri: vscode.Uri, lineNumber: number, codeType: CodeType) {
-	
+/**
+ * Opens the code for the specified `codeType` in Ignition Designer by creating and opening a new `.py` document
+ * with the function definition for the code.
+ * 
+ * @param documentUri The URI of the document containing the code to be opened
+ * @param lineNumber The line number of the code to be opened
+ * @param codeType The type of code to be opened
+ */
+async function openIgnitionCode(documentUri: vscode.Uri, lineNumber: number, codeType: CodeType) {
+	// Convert the URI path to the correct format for Windows
 	let filePath = documentUri.path;
-	filePath = normalizeWindowsFilePath(filePath)
+	filePath = flintUtils.normalizeWindowsFilePath(filePath)
 
-	// flint:transform.py?filePath=//myFolder/myFile.json&line=5
-	const uri = vscode.Uri.parse(`${URI_SCHEME}:/flint/${codeType.fileName}.py?filePath=${filePath}&line=${lineNumber}&codeType=${codeType.codeKey}`);
-
+	// Get the code for the specified `codeType`
 	let code = getLineCode(filePath, lineNumber, codeType);
-
+	
 	// Decode the code
 	code = flintUtils.decodeCodeText(code);
+	
+	// Get the document by the URI
+	const document = vscode.workspace.textDocuments.find((doc) => doc.uri === documentUri);
 
-	// Insert the function definition
-	code = insertFunctionDefinition(code, codeType);
+	if (!document) {
+		vscode.window.showErrorMessage(`Could not find document ${documentUri.path}`);
+		return;
+	}
+	
+	// Get the details of the parent symbol to provide context to the function definition
+	const { parentObject } = await getLineDetails(document, lineNumber);
+	
+	// Create the URI for the new `.py` document
+	// e.g. flint:/myFolder/myFile.py?filePath=myFolder/myFile.json&line=5&codeType=transform
+	const uri = vscode.Uri.parse(`${URI_SCHEME}:/${codeType.getFileName(parentObject)}.py?filePath=${filePath}&line=${lineNumber}&codeType=${codeType.codeKey}`);
+	
+	// Insert the function definition into the code
+	code = insertFunctionDefinition(code, codeType, parentObject);
 
-	// Create a new document and open it in the editor
+	// Create the new `.py` document and open it in the editor
 	console.log("ignition-flint.openIgnitionCode: " + uri);
 	try {
-		// vscode.workspace.fs.writeFile
 		FLINT_FS.writeFile(uri, Buffer.from(code), { create: true, overwrite: true });
-
 	} catch (error) {
 		console.log("ignition-flint.openIgnitionCode: " + error);
 	}
@@ -338,6 +407,15 @@ function openIgnitionCode(documentUri: vscode.Uri, lineNumber: number, codeType:
 }
 
 
+/**
+ * Edits a script code for a given document and code type. If the document is undefined,
+ * it prompts the user to select a document to edit. If the user is not on a code line
+ * and the code type requires a specific context key, it prompts the user to select a
+ * line number to edit. It then opens the code editor for the selected document and line number.
+ * 
+ * @param document - The document to edit. If undefined, the user will be prompted to select a document.
+ * @param codeType - The type of code to edit found in the `codeTypes` module.
+ */
 async function editScriptCode(document: vscode.TextDocument, codeType: CodeType) {
 	let lineNumber;
 
@@ -371,75 +449,96 @@ async function editScriptCode(document: vscode.TextDocument, codeType: CodeType)
 	openIgnitionCode(document.uri, lineNumber, codeType);
 }
 
-function normalizeWindowsFilePath(filePath: string): string {
-	if (process.platform === 'win32') {
-		// Replace the beginning slash
-		filePath = filePath.replace(/^\//, '');
-	}
-	return filePath;
-}
-
-
+/**
+ * Replaces a line of text in a given file.
+ *
+ * @param filePath - The file path of the file to modify.
+ * @param lineNumber - The line number of the line to replace (0-based).
+ * @param lineText - The new text to replace the line with.
+ * @throws Error if the file is not open.
+ */
 function replaceLine(filePath: string, lineNumber: number, lineText: string) {
-	
-
-	// If the filePath is currently open, then replace the line in the open document
-	const openDocument = vscode.workspace.textDocuments.find(doc => normalizeWindowsFilePath(doc.uri.path) === filePath);
+	// Check if the file is currently open in the workspace
+	const openDocument = vscode.workspace.textDocuments.find(doc => flintUtils.normalizeWindowsFilePath(doc.uri.path) === filePath);
 	if (openDocument) {
-		
-		const line = openDocument.lineAt(lineNumber - 1);
+		// If the file is open, retrieve the line to replace and its range
+		const line = openDocument.lineAt(lineNumber);
 		const range = new vscode.Range(line.range.start, line.range.end);
-		
+
+		// Create a WorkspaceEdit object and replace the old line with the new line
 		let edit = new vscode.WorkspaceEdit();
 		edit.replace(openDocument.uri, range, lineText);
+
+		// Apply the edit to the workspace
 		vscode.workspace.applyEdit(edit);
-	
 	} else {
+		// If the file is not open, throw an error
 		throw new Error('File is not open');
-	} 
+	}
 }
 
-function updateEditedCode(document: vscode.TextDocument) {
+/**
+ * Updates the edited code for a given `TextDocument`.
+ *
+ * @param document - The `TextDocument` to update.
+ */
+async function updateEditedCode(document: vscode.TextDocument) {
+	// Check if the `TextDocument` is in the `URI_SCHEME` scheme
 	if (document.uri.scheme === URI_SCHEME) {
+		// Get the text of the `TextDocument`
 		let documentCode = document.getText();
-		let codeKey = flintUtils.getUriQueryParameter(document.uri, 'codeType');
+		
+		// Get the code key from the URI query parameters
+		const codeKey = flintUtils.getUriQueryParameter(document.uri, 'codeType');
 
 		if (!codeKey) {
 			return;
 		}
 
-		let codeType = getCodeType(codeKey);
+		// Get the `CodeType` object for the `codeKey`
+		const codeType = getCodeType(codeKey);
 
 		if (!codeType) {
 			return;
 		}
 		
-		documentCode = removeFunctionDefinition(documentCode, codeType);
+		// Get the line number from the URI query parameters and parse it as a number
+		const lineNumber = flintUtils.getUriQueryParameter(document.uri, 'line') as string;
+		const line = parseInt(lineNumber, 10);
 
-		console.log("ignition-flint.updateEditedCode: " + documentCode);
+		// Get the file path from the URI query parameters
 		const filePath = flintUtils.getUriQueryParameter(document.uri, 'filePath');
 
 		if (!filePath) {
 			return;
 		}
 
-		let lineNumber = flintUtils.getUriQueryParameter(document.uri, 'line') as string;
-		// Cast lineNumber to a number
-		let line = parseInt(lineNumber, 10);
+		// Find the original `TextDocument` for the `filePath`
+		const originalDocument = vscode.workspace.textDocuments.find(doc => flintUtils.normalizeWindowsFilePath(doc.uri.path) === filePath);
 
-	
-		// Encode the code
+		if (!originalDocument) {
+			// The original document is not open, so we can't update the code
+			vscode.window.showErrorMessage(`Could not find document ${filePath}, is it open?`);
+			return;
+		}
+
+		// Get the details of the parent symbol to provide context to the function definition
+		const { parentObject } = await getLineDetails(originalDocument, line);
+		
+		// Remove the function definition from the `documentCode`
+		documentCode = removeFunctionDefinition(documentCode, codeType, parentObject);
+
+		// Encode the `documentCode`
 		const encodedCode = flintUtils.encodeCodeText(documentCode);
 		
-		// The line is a key in json, with an abstract number of tabs
-		// like this: \t\t"code": "print('\tHello World')",
-		// So we need to replace the line with the same number of tabs
+		// Get the text of the line to replace
 		const lineText = getLine(filePath, line);
 
-		// Replace the value after the jsonKey
+		// Replace the value after the jsonKey with the encoded code
 		const jsonKey = codeType.getJsonKey();
 		const newLineText = lineText.replace(new RegExp(`"${jsonKey}":\\s"(.*)"`, 'i'), `"${jsonKey}": "${encodedCode}"`);
 
+		// If the line text has been modified, replace the line in the original document
 		if (lineText !== newLineText) {
 			replaceLine(filePath, line, newLineText);
 		}
