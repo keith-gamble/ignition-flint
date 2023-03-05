@@ -2,7 +2,7 @@
 	"name": "ignition-flint",
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.54.0"
 	},
