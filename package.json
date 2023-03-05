@@ -3,6 +3,10 @@
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
 	"version": "0.0.2",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/keith-gamble/ignition-flint"
+	},
 	"engines": {
 		"vscode": "^1.54.0"
 	},
@@ -10,7 +14,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"*"
+		"onLanguage:json"
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {
