@@ -3,7 +3,7 @@
 	"name": "ignition-flint",
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/keith-gamble/ignition-flint"
@@ -23,14 +23,14 @@
 		"clipboardWrite": true,
 		"filesystem": [
 			{
-			  "scheme": "flint",
-			  "authority": "file-filesystem-provider",
-			  "isCaseSensitive": true,
-			  "watcher": {
-				"globPattern": "**/*"
-			  }
+				"scheme": "flint",
+				"authority": "file-filesystem-provider",
+				"isCaseSensitive": true,
+				"watcher": {
+					"globPattern": "**/*"
+				}
 			}
-		  ],
+		],
 		"commands": [
 			{
 				"command": "ignition-flint.edit-script-transform",
@@ -55,7 +55,7 @@
 			{
 				"command": "ignition-flint.open-with-kindling",
 				"title": "Open with Kindling"
-			}			
+			}
 		],
 		"menus": {
 			"editor/context": [
