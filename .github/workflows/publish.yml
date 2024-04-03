@@ -25,7 +25,7 @@ jobs:
       - name: Install Dependencies
         run: npm install
       
-      - name: Build
+      - name: Compile TypeScript to Extension
         run: npm run compile
       
       - name: Set Version from Tag or Input
