@@ -24,7 +24,10 @@ jobs:
 
       - name: Install Dependencies
         run: npm install
-
+      
+      - name: Build
+        run: npm run compile
+      
       - name: Set Version from Tag or Input
         id: set_version
         run: |
