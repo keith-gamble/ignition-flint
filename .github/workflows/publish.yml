@@ -12,6 +12,7 @@ on:
 
 jobs:
   build:
+    name: Build and Publish Extension
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
