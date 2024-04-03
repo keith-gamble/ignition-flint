@@ -551,6 +551,11 @@ async function updateEditedCode(document: vscode.TextDocument) {
 
 
 function openWithKindling(uri: vscode.Uri) {
+	if (!uri) {
+        vscode.window.showWarningMessage('No file selected.');
+        return;
+    }
+
     // Retrieve the path of the file to open
     const filePath = uri.fsPath;
 

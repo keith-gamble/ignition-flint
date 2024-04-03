@@ -11,3 +11,6 @@ old
 out
 
 tmp*
+.env
+
+*.vsix
