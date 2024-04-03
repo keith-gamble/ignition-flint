@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { exec } from 'child_process';
 import * as fs from 'fs';
 
 import { FlintFileSystemProvider } from './flintFileSystemProvider';
@@ -43,6 +44,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register any commands found for the codetypes
 	registerCommands(context, editScriptCode);
+
+	// Register the command to open the file with Kindling
+	context.subscriptions.push(vscode.commands.registerCommand('ignition-flint.open-with-kindling', openWithKindling));
 	
 	// Add the quick actions for editing scripts
 	context.subscriptions.push(vscode.languages.registerCodeActionsProvider('json', { provideCodeActions }));
@@ -543,4 +547,31 @@ async function updateEditedCode(document: vscode.TextDocument) {
 			replaceLine(filePath, line, newLineText);
 		}
 	}
+}
+
+
+function openWithKindling(uri: vscode.Uri) {
+    // Retrieve the path of the file to open
+    const filePath = uri.fsPath;
+
+    // Determine the command to open Kindling depending on the user's OS
+    let command: string;
+
+    if (process.platform === 'win32') {
+        // Windows command (adjust if needed)
+        command = `start Kindling "${filePath}"`;
+    } else if (process.platform === 'darwin') {
+        // macOS command (adjust if needed)
+        command = `open -a Kindling "${filePath}"`;
+    } else {
+        // Linux command (adjust if needed)
+        command = `kindling "${filePath}"`;
+    }
+
+    // Execute the command
+    exec(command, (error) => {
+        if (error) {
+            vscode.window.showErrorMessage(`Failed to open file with Kindling: ${error.message}`);
+        }
+    });
 }

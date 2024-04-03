@@ -14,7 +14,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:json"
+		"onLanguage:json",
+		"onCommand:ignition-flint.open-with-kindling"
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {
@@ -49,7 +50,11 @@
 			{
 				"command": "ignition-flint.edit-tag-event-script",
 				"title": "Ignition-Flint: Edit Tag Event Script"
-			}
+			},
+			{
+				"command": "ignition-flint.open-with-kindling",
+				"title": "Open with Kindling"
+			}			
 		],
 		"menus": {
 			"editor/context": [
@@ -77,6 +82,13 @@
 					"command": "ignition-flint.edit-tag-event-script",
 					"group": "navigation",
 					"when": "ignition-flint:lineIsTagEventScript"
+				}
+			],
+			"explorer/context": [
+				{
+					"when": "resourceExtname == .gwbk",
+					"command": "ignition-flint.open-with-kindling",
+					"group": "navigation"
 				}
 			]
 		}
