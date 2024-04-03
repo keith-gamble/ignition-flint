@@ -17,7 +17,8 @@
 	],
 	"activationEvents": [
 		"onLanguage:json",
-		"onCommand:ignition-flint.open-with-kindling"
+		"onCommand:ignition-flint.open-with-kindling",
+		"onFileSystem:flint"
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {

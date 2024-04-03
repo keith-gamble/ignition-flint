@@ -29,14 +29,18 @@ const FLINT_FS = new FlintFileSystemProvider();
  */
 const parsedJsonDocuments: Map<vscode.Uri, Map<number, string>> = new Map();
 
+var outputChannel: vscode.OutputChannel;
 /**
  * Activates the extension.
  */
 export function activate(context: vscode.ExtensionContext) {
 	// Create an output channel for showing the user data about the extension
-	const outputChannel = vscode.window.createOutputChannel('Ignition Flint');
+	// If the output channel already exists, clear it, otherwise create a new one
+	outputChannel = vscode.window.createOutputChannel('Ignition Flint');
+	outputChannel.clear();
+
 	context.subscriptions.push(outputChannel);
-	outputChannel.appendLine('ignition-flint extension active');
+    outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated`);
 	
 	// Create the temporary file system used for editing scripts
 	FLINT_FS.createDirectory(vscode.Uri.parse('flint:/flint'));
@@ -44,12 +48,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register any commands found for the codetypes
 	registerCommands(context, editScriptCode);
+	outputChannel.appendLine(`[${new Date().toISOString()}] - Registered commands for code types`);
 
 	// Register the command to open the file with Kindling
 	context.subscriptions.push(vscode.commands.registerCommand('ignition-flint.open-with-kindling', openWithKindling));
+	outputChannel.appendLine(`[${new Date().toISOString()}] - Registered command to open with Kindling`);
 	
 	// Add the quick actions for editing scripts
 	context.subscriptions.push(vscode.languages.registerCodeActionsProvider('json', { provideCodeActions }));
+	outputChannel.appendLine(`[${new Date().toISOString()}] - Registered code actions provider`);
 	// After registering the actions, check to make sure if we should set any now
 
 	// Create a handle here to capture debounce the text editor changing, limit it to every 100ms. Only run this on json files
@@ -63,6 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Record any open documents
 	context.subscriptions.push(vscode.workspace.onDidOpenTextDocument((document) => {
+		outputChannel.appendLine(`[${new Date().toISOString()}] - Opened document: ${document.uri.toString()}`);
 		// If the document is a json file, add it to the open documents
 		if (document.languageId === 'json') {
 			createLineNumberToSymbolPathMapping(document);
@@ -91,6 +99,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Watch for the temporary FlintFS document to be saved, and then fire a command to update the original document
 	vscode.workspace.onDidSaveTextDocument(updateEditedCode);
+	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);
+
 }
 
 /**
@@ -487,6 +497,8 @@ function replaceLine(filePath: string, lineNumber: number, lineText: string) {
  * @param document - The `TextDocument` to update.
  */
 async function updateEditedCode(document: vscode.TextDocument) {
+	outputChannel.appendLine(`[${new Date().toISOString()}] - Document saved: ${document.uri.toString()}`);
+
 	// Check if the `TextDocument` is in the `URI_SCHEME` scheme
 	if (document.uri.scheme === URI_SCHEME) {
 		// Get the text of the `TextDocument`
@@ -552,9 +564,12 @@ async function updateEditedCode(document: vscode.TextDocument) {
 
 function openWithKindling(uri: vscode.Uri) {
 	if (!uri) {
+		outputChannel.appendLine(`[${new Date().toISOString()}] - No file selected for Kindling.`);
         vscode.window.showWarningMessage('No file selected.');
         return;
     }
+
+	outputChannel.appendLine(`[${new Date().toISOString()}] - Opening ${uri.fsPath} with Kindling.`);
 
     // Retrieve the path of the file to open
     const filePath = uri.fsPath;
@@ -576,7 +591,10 @@ function openWithKindling(uri: vscode.Uri) {
     // Execute the command
     exec(command, (error) => {
         if (error) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] - Failed to open with Kindling: ${error.message}`);
             vscode.window.showErrorMessage(`Failed to open file with Kindling: ${error.message}`);
+        } else {
+            outputChannel.appendLine(`[${new Date().toISOString()}] - File opened with Kindling successfully.`);
         }
     });
 }
