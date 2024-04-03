@@ -3,7 +3,8 @@
 	"name": "ignition-flint",
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
-	"version": "0.0.3",
+	"icon": "images/assets/flint-icon.png",
+	"version": "0.0.4",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/keith-gamble/ignition-flint"
