@@ -70,7 +70,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Record any open documents
 	context.subscriptions.push(vscode.workspace.onDidOpenTextDocument((document) => {
-		outputChannel.appendLine(`[${new Date().toISOString()}] - Opened document: ${document.uri.toString()}`);
 		// If the document is a json file, add it to the open documents
 		if (document.languageId === 'json') {
 			createLineNumberToSymbolPathMapping(document);
