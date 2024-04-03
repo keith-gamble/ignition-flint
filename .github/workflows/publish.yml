@@ -1,0 +1,58 @@
+name: Publish Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: false # Change to false since it won't be required for tag pushes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Set Version from Tag or Input
+        id: set_version
+        run: |
+          if [[ ${{ github.event_name }} == 'push' ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Extracted version $VERSION from tag"
+          else
+            VERSION=${{ github.event.inputs.version }}
+            if [[ -z "$VERSION" ]]; then
+              echo "No version provided"
+              exit 1
+            fi
+            echo "Using manually provided version $VERSION"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+        shell: bash
+
+      - name: Update version in package.json
+        if: steps.set_version.outputs.version
+        run: |
+          jq '.version="${{ steps.set_version.outputs.version }}"' package.json > package.tmp.json && mv package.tmp.json package.json
+        shell: bash
+
+      - name: Package Extension
+        run: npx vsce package
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish -p $VSCE_PAT

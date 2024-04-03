@@ -1,4 +1,5 @@
 {
+	"publisher": "keith-gamble",
 	"name": "ignition-flint",
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
