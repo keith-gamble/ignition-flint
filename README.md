@@ -2,6 +2,10 @@
 
 Flint for Ignition enriches the development experience on the Ignition platform by providing specialized tools directly within Visual Studio Code. This extension aims to streamline the workflow of developers working with Ignition projects, offering functionalities that cater specifically to the nuances of scripting and configuration in Ignition.
 
+## Download the Extension
+
+- **[Flint for Ignition on the Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Keith-gamble.ignition-flint)**
+
 ## Key Features
 
 ### Enhanced Script Editing
