@@ -54,6 +54,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('ignition-flint.open-with-kindling', openWithKindling));
 	outputChannel.appendLine(`[${new Date().toISOString()}] - Registered command to open with Kindling`);
 	
+	// Register the "paste-as-json" command to paste the clipboard contents as JSON
+	context.subscriptions.push(vscode.commands.registerCommand('ignition-flint.paste-as-json', pasteAsJson));
+
 	// Add the quick actions for editing scripts
 	context.subscriptions.push(vscode.languages.registerCodeActionsProvider('json', { provideCodeActions }));
 	outputChannel.appendLine(`[${new Date().toISOString()}] - Registered code actions provider`);
@@ -597,3 +600,51 @@ function openWithKindling(uri: vscode.Uri) {
         }
     });
 }
+
+async function pasteAsJson() {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+	  return;
+	}
+  
+	const clipboard = await vscode.env.clipboard.readText();
+	const convertedJson = convertToJson(clipboard);
+  
+	editor.edit((editBuilder) => {
+	  editBuilder.insert(editor.selection.active, convertedJson);
+	});
+  
+	await vscode.commands.executeCommand('editor.action.formatDocument');
+  }
+  
+  function convertToJson(input: string): string {
+	// Replace double quotes with a temporary placeholder
+	input = input.replace(/"/g, '§§§');
+	
+	// Remove 'u' prefix from keys and values
+	input = input.replace(/u'/g, "'");
+	
+	// Replace single quotes with double quotes
+	input = input.replace(/'/g, '"');
+	
+	// Replace the temporary placeholder back to double quotes
+	input = input.replace(/§§§/g, '\'');
+	
+	// Replace True and False with true and false
+	input = input.replace(/True/g, 'true').replace(/False/g, 'false');
+	
+	// Wrap unquoted keys in quotes
+	input = input.replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3');
+	
+	// Specifically target and wrap values that contain brackets but are not arrays
+	// Adjust this regex to handle the case of values like '[default]Exchange/NPEDemo/Machine1'
+	input = input.replace(/:\s*([^"\[\]]*\[[^\[\]]+\][^"\[\]]*)(?=[,}])/g, ': "$1"');
+	
+	// Capture and wrap standalone strings, ensuring we do not interfere with arrays of objects
+	input = input.replace(/:\s*([^"\[\]{},]+)(?=[},])/g, ': "$1"');
+	
+	return input;
+  }
+  
+  
+  

@@ -4,7 +4,7 @@
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
 	"icon": "images/assets/flint-icon.png",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/keith-gamble/ignition-flint"
@@ -16,6 +16,7 @@
 		"Other"
 	],
 	"activationEvents": [
+		"onLanguage:markdown",
 		"onLanguage:json",
 		"onCommand:ignition-flint.open-with-kindling",
 		"onFileSystem:flint"
@@ -57,6 +58,10 @@
 			{
 				"command": "ignition-flint.open-with-kindling",
 				"title": "Open with Kindling"
+			},
+			{
+				"command": "ignition-flint.paste-as-json",
+				"title": "Paste as JSON"
 			}
 		],
 		"menus": {
@@ -85,6 +90,11 @@
 					"command": "ignition-flint.edit-tag-event-script",
 					"group": "navigation",
 					"when": "ignition-flint:lineIsTagEventScript"
+				},
+				{
+					"command": "ignition-flint.paste-as-json",
+					"group": "clipboard",
+					"when": "editorTextFocus && !editorReadonly"
 				}
 			],
 			"explorer/context": [

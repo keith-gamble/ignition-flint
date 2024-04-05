@@ -19,6 +19,11 @@ Flint for Ignition integrates with Kindling, a utility created by Inductive Auto
 ### Broad Scripting Support
 The extension offers comprehensive support for various Ignition script types, including script actions, script transforms, custom methods, message handlers, and tag event scripts. This broad support ensures developers can efficiently manage and edit a wide range of scripting tasks within their Ignition projects.
 
+### Copy as JSON Function
+The `Copy as JSON` feature is designed to enhance the development workflow by allowing developers to easily convert Ignition's printed scripting and configuration data into a JSON format suitable for documentation, sharing, or further processing. This functionality recognizes and respects the complexity of Ignition's data structures, ensuring accurate and user-friendly JSON representation.
+
+- **Using the Feature**: Simply select where you would like to add it into a text file, right-click, and select `Copy as JSON`. The extension will convert the selected data into a well-formatted JSON string and copy it to your clipboard, ready for pasting wherever you need it.
+
 ## Installation and Usage
 
 1. **Install the Extension**: Find "Flint for Ignition" in the Extensions view (`Ctrl+Shift+X`) in VS Code and install it.
@@ -28,6 +33,8 @@ The extension offers comprehensive support for various Ignition script types, in
 3. **Saving Edits**: Save your changes in the editor to automatically re-encode and update the original JSON file.
 
 4. **Managing Gateway Backups**: Right-click a `.gwbk` file and choose "Open with Kindling" for direct access to backup management features.
+
+5. **Copying as JSON**: Use the `Copy as JSON` feature to quickly convert unicode json strings from Ignition into JSON format for easy sharing and documentation.
 
 ## Kindling: A Closer Look
 
