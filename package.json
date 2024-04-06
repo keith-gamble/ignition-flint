@@ -121,7 +121,7 @@
 			"explorer": [
 			  {
 				"id": "ignitionFileSystem",
-				"name": "Ignition Scripts"
+				"name": "Ignition Project Scripts"
 			  }
 			]
 		  }

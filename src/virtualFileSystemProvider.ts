@@ -42,7 +42,7 @@ export class Directory implements vscode.FileStat {
 
 export type Entry = File | Directory;
 
-export class FlintFileSystemProvider implements vscode.FileSystemProvider {
+export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
 
 	root = new Directory('');
 
@@ -71,17 +71,17 @@ export class FlintFileSystemProvider implements vscode.FileSystemProvider {
 		throw vscode.FileSystemError.FileNotFound();
 	}
 
-	writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): void {
+	writeFile(uri: vscode.Uri, content: Uint8Array, { create, overwrite }: { create: boolean, overwrite: boolean }): void {
 		const basename = path.posix.basename(uri.path);
 		const parent = this._lookupParentDirectory(uri);
 		let entry = parent.entries.get(basename);
 		if (entry instanceof Directory) {
 			throw vscode.FileSystemError.FileIsADirectory(uri);
 		}
-		if (!entry && !options.create) {
+		if (!entry && !create) {
 			throw vscode.FileSystemError.FileNotFound(uri);
 		}
-		if (entry && options.create && !options.overwrite) {
+		if (entry && create && !overwrite) {
 			throw vscode.FileSystemError.FileExists(uri);
 		}
 		if (!entry) {
