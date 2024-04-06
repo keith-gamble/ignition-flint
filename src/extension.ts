@@ -13,6 +13,12 @@ import{
 	removeFunctionDefinition,
 	registerCommands
 } from "./codeTypes";
+import { 
+	IgnitionFileSystemProvider, 
+	ConstantResource,
+	ClassResource,
+	FunctionResource 
+} from './ignitionFileSystemProvider';
 
 /**
  * The URI scheme used for Flint files.
@@ -101,6 +107,33 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Watch for the temporary FlintFS document to be saved, and then fire a command to update the original document
 	vscode.workspace.onDidSaveTextDocument(updateEditedCode);
+
+	const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+	const ignitionFileSystemProvider = new IgnitionFileSystemProvider(workspaceRoot);
+	// Register the tree data provider and keep a reference to the TreeView
+	const ignitionTreeView = vscode.window.createTreeView('ignitionFileSystem', {
+		treeDataProvider: ignitionFileSystemProvider
+	});
+	ignitionFileSystemProvider.setTreeView(ignitionTreeView);
+	context.subscriptions.push(ignitionTreeView);
+
+
+	context.subscriptions.push(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', (node: ConstantResource|ClassResource|FunctionResource) => {
+		const qualifiedPath = node.getFullyQualifiedPath();
+        vscode.env.clipboard.writeText(qualifiedPath).then(() => {
+            vscode.window.showInformationMessage(`Copied to clipboard: ${qualifiedPath}`);
+        });
+    }));
+	
+	vscode.window.onDidChangeActiveTextEditor(editor => {
+		if (editor && editor.document.languageId === 'python') { 
+			console.log("ignition-flint.onDidChangeActiveTextEditor: " + editor.document.uri);
+			ignitionFileSystemProvider.revealTreeItemForResourceUri(editor.document.uri);
+		}
+	}, null, context.subscriptions);
+	
+
+	
 	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);
 
 }
@@ -645,6 +678,4 @@ async function pasteAsJson() {
 	
 	return input;
   }
-  
-  
   

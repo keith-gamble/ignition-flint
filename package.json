@@ -62,6 +62,11 @@
 			{
 				"command": "ignition-flint.paste-as-json",
 				"title": "Paste as JSON"
+			},
+			{
+				"command": "ignition-flint.copy-script-object-path-to-clipboard",
+				"title": "Copy path",
+				"category": "Ignition Flint"
 			}
 		],
 		"menus": {
@@ -103,8 +108,23 @@
 					"command": "ignition-flint.open-with-kindling",
 					"group": "navigation"
 				}
+			],
+			"view/item/context": [
+				{
+					"when": "view == ignitionFileSystem && viewItem == scriptObject",
+					"command": "ignition-flint.copy-script-object-path-to-clipboard",
+					"group": "inline"
+				}
 			]
-		}
+		},
+		"views": {
+			"explorer": [
+			  {
+				"id": "ignitionFileSystem",
+				"name": "Ignition Scripts"
+			  }
+			]
+		  }
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.54.0",
