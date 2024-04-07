@@ -37,37 +37,80 @@
 		"commands": [
 			{
 				"command": "ignition-flint.edit-script-transform",
-				"title": "Ignition-Flint: Edit Script Transform"
+				"title": "Edit Script Transform",
+				"category": "Ignition Flint"
 			},
 			{
 				"command": "ignition-flint.edit-script-action",
-				"title": "Ignition-Flint: Edit Script Action"
+				"title": "Edit Script Action",
+				"category": "Ignition Flint"
 			},
 			{
 				"command": "ignition-flint.edit-custom-method",
-				"title": "Ignition-Flint: Edit Custom Method"
+				"title": "Edit Custom Method",
+				"category": "Ignition Flint"
 			},
 			{
 				"command": "ignition-flint.edit-message-handler",
-				"title": "Ignition-Flint: Edit Message Handler"
+				"title": "Edit Message Handler",
+				"category": "Ignition Flint"
 			},
 			{
 				"command": "ignition-flint.edit-tag-event-script",
-				"title": "Ignition-Flint: Edit Tag Event Script"
+				"title": "Edit Tag Event Script",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.edit-property-change-script",
+				"title": "Edit Property Change Script",
+				"category": "Ignition Flint"
 			},
 			{
 				"command": "ignition-flint.open-with-kindling",
+				"category": "Ignition Flint",
 				"title": "Open with Kindling"
 			},
 			{
 				"command": "ignition-flint.paste-as-json",
+				"category": "Ignition Flint",
 				"title": "Paste as JSON"
 			},
 			{
 				"command": "ignition-flint.copy-script-object-path-to-clipboard",
 				"title": "Copy path",
-				"category": "Ignition Flint"
-			}
+				"category": "Ignition Flint",
+				"icon": "$(clippy)"
+			},
+			{
+				"command": "ignition-flint.refresh-tree-view",
+				"title": "Refresh Ignition Projects",
+				"category": "Ignition Flint",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "ignition-flint.add-script-module",
+				"title": "Add Script Module",
+				"category": "Ignition Flint",
+				"icon": "$(new-file)"
+			  },
+			  {
+				"command": "ignition-flint.add-script-package",
+				"title": "Add Script Package",
+				"category": "Ignition Flint",
+				"icon": "$(new-folder)"
+			  },
+			  {
+				"command": "ignition-flint.delete-script-module",
+				"title": "Delete Resource",
+				"category": "Ignition Flint",
+				"icon": "$(trash)"
+			  },
+			  {
+				"command": "ignition-flint.rename-resource",
+				"title": "Rename Resource",
+				"category": "Ignition Flint",
+				"icon": "$(pencil)"
+			  }
 		],
 		"menus": {
 			"editor/context": [
@@ -97,6 +140,11 @@
 					"when": "ignition-flint:lineIsTagEventScript"
 				},
 				{
+					"command": "ignition-flint.edit-property-change-script",
+					"group": "navigation",
+					"when": "ignition-flint:lineIsPropertyChangeScript"
+				},
+				{
 					"command": "ignition-flint.paste-as-json",
 					"group": "clipboard",
 					"when": "editorTextFocus && !editorReadonly"
@@ -109,20 +157,53 @@
 					"group": "navigation"
 				}
 			],
+			"view/title": [
+				{
+					"command": "ignition-flint.refresh-tree-view",
+					"when": "view == ignitionFileSystem",
+					"group": "navigation@+1",
+					"icon": "$(refresh)"
+				}
+			],
 			"view/item/context": [
 				{
-					"when": "view == ignitionFileSystem && viewItem == scriptObject",
+					"when": "view == ignitionFileSystem && viewItem == scriptElementObject",
 					"command": "ignition-flint.copy-script-object-path-to-clipboard",
-					"group": "inline"
+					"group": "inline",
+					"icon": "$(clippy)"
+				},
+				{
+					"command": "ignition-flint.add-script-module",
+					"when": "view == ignitionFileSystem && (viewItem == projectObject || viewItem == folderObject)",
+					"group": "inline",
+					"icon": "$(new-file)"
+				},
+				{
+					"command": "ignition-flint.add-script-package",
+					"when": "view == ignitionFileSystem && (viewItem == projectObject || viewItem == folderObject)",
+					"group": "inline",
+					"icon": "$(new-folder)"
+				},
+				{
+				"command": "ignition-flint.delete-script-module",
+				"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
+				"icon": "$(trash)"
+				},
+				{
+				"command": "ignition-flint.rename-resource",
+				"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
+				"icon": "$(pencil)"
 				}
 			]
 		},
 		"views": {
 			"explorer": [
-			  {
-				"id": "ignitionFileSystem",
-				"name": "Ignition Project Scripts"
-			  }
+				{
+					"id": "ignitionFileSystem",
+					"name": "Ignition Project Scripts",
+					"icon": "$(refresh)",
+					"contextualTitle": "Ignition Project Scripts"
+				}
 			]
 		  }
 	},

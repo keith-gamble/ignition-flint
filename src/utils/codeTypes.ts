@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { FlintError } from './flintUtils';
-import { VirtualFileSystemProvider } from '../virtualFileSystemProvider';
+import { FlintError } from './textEncoding';
+import { VirtualFileSystemProvider } from '../providers/virtualFileSystem';
 
 export abstract class CodeType {
     abstract codeKey: string;
@@ -129,12 +129,32 @@ export class tagEventScript extends CodeType {
     }
 }
 
+export class propertyChangeScript extends CodeType {
+	codeKey = "onChange.script";
+	defaultFileName = "onChange";
+	contextKey = "ignition-flint:lineIsPropertyChangeScript";
+	codeActionDetails = { text: "Edit Property Change Script", command: "ignition-flint.edit-property-change-script", title: "Edit Property Change Script" };
+
+	getFunctionDefinition(parentObject: object): string {
+		return "def valueChanged(self, previousValue, currentValue, origin, missedEvents):\n";
+	}
+
+	getFileName(parentObject: object): string {
+		if ("property" in parentObject) {
+			return parentObject["property"] as string;
+		}
+		return this.defaultFileName;
+	}
+}
+
+
 export const codeTypeMap = new Map<string, CodeType>([
     ['transforms.code', new scriptTransform()],
     ['config.script', new scriptAction()],
     ['customMethods.script', new customMethod()],
     ['messageHandlers.script', new messageHandler()],
     ['eventScripts.script', new tagEventScript()],
+	['onChange.script', new propertyChangeScript()],
 ]);
 
 export function getCodeType(codeKey: string): CodeType | undefined {
@@ -172,18 +192,4 @@ export function removeFunctionDefinition(codeText: string, codeType: CodeType, p
     }
 
     return codeText.replace(functionDefinition, '');
-}
-
-export function registerCommands(
-    context: vscode.ExtensionContext,
-	fileSystemProvider: VirtualFileSystemProvider,
-    callable: (fileSystem: VirtualFileSystemProvider, documentUri: vscode.Uri, lineNumber: number, codeType: CodeType) => void | Promise<void>,
-) {
-    for (const codeType of codeTypeMap.values()) {
-        context.subscriptions.push(
-            vscode.commands.registerCommand(codeType.codeActionDetails.command, (documentUri: vscode.Uri, lineNumber: number) =>
-                callable(fileSystemProvider, documentUri, lineNumber, codeType)
-            )
-        );
-    }
 }

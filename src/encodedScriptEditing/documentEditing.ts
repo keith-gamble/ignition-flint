@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as flintUtils from './utils/flintUtils';
-import { CodeType, getCodeType, insertFunctionDefinition, removeFunctionDefinition } from './utils/codeTypes';
+import * as flintUtils from '../utils/textEncoding';
+import { CodeType, getCodeType, insertFunctionDefinition, removeFunctionDefinition } from '../utils/codeTypes';
 import * as fs from 'fs';
-import { VirtualFileSystemProvider } from './virtualFileSystemProvider';
+import { VirtualFileSystemProvider } from '../providers/virtualFileSystem';
 
 export async function openIgnitionCode(fileSystem: VirtualFileSystemProvider, documentUri: vscode.Uri, lineNumber: number, codeType: CodeType) {
     let filePath = documentUri.path;
@@ -104,34 +104,6 @@ export async function updateEditedCode(document: vscode.TextDocument) {
             replaceLine(filePath, lineNumber, newLineText);
         }
     }
-}
-
-export async function getLineDetails(document: vscode.TextDocument, lineNumber: number): Promise<{ symbol: vscode.DocumentSymbol, symbolStack: vscode.DocumentSymbol[], symbolPath: string, parentObject: object }> {
-    // Get all document symbols
-    const symbols: vscode.DocumentSymbol[] = (await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as vscode.DocumentSymbol[];
-
-    // Recursively search through each symbol to find the one that matches the current line number
-    // Each symbol will contain more symbols, so we need to recursively search through them
-    const symbolStack = getSymbolStack(symbols, lineNumber) as vscode.DocumentSymbol[];
-
-    // Look at the current symbol, and get its content
-    const currentSymbol = symbolStack[symbolStack.length - 1];
-    const parentSymbol = symbolStack[symbolStack.length - 2];
-    let parentSymbolContent = document.getText(parentSymbol.range);
-
-    // If the parentSymbolContent contains the parentSymbol name in quotes, then it includes the JSON key. We need to remove it
-    if (parentSymbolContent.startsWith(`"${parentSymbol.name}"`)) {
-        // Remove the first instance of the key from the parentSymbolContent
-        let keyLength = parentSymbol.name.length + 3;
-        parentSymbolContent = parentSymbolContent.substring(keyLength);
-    }
-
-    // Parse the current symbol into an object
-    const parentSymbolObject = JSON.parse(parentSymbolContent);
-
-    const symbolPath = symbolStack.map((s) => s.name).join('.');
-
-    return { symbol: currentSymbol, symbolStack: symbolStack, symbolPath: symbolPath, parentObject: parentSymbolObject };
 }
 
 function getSymbolStack(symbols: vscode.DocumentSymbol[], lineNumber: number): vscode.DocumentSymbol[] | undefined {
