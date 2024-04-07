@@ -6,11 +6,13 @@ import { IgnitionFileResource } from '../resources/ignitionFileResource';
 import { ScriptResource } from '../resources/scriptResource';
 import { FolderResource } from '../resources/folderResource';
 import { debounce } from '../utils/debounce';
+import { AbstractContentElement } from '../resources/abstractContentElement';
+import { AbstractResourceContainer } from '../resources/abstractResourceContainer';
 
-export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | IgnitionProjectResource> {
+export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
-	private _projects: { id: string, title: string, parent: string, path: string, relativePath: string }[] = [];
+	private _projects: { id: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
 	public treeRoot: IgnitionProjectResource[] = [];
 	private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
 	private refreshTreeViewDebounced = debounce(this._refreshTreeView.bind(this), 500); // Debounce refreshTreeView by 500ms
@@ -49,11 +51,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				newTreeRoot.push(existingProjectResource);
 			} else {
 				// Create a new project resource instance
-				const projectResource = new IgnitionProjectResource(project.id, project.title, project.parent, project.path);
+				const projectResource = new IgnitionProjectResource(project.id, project.title, project.parentProjectId, project.path);
 	
 				// Set the parent project based on searching the existing tree
-				if (project.parent) {
-					const parentProjectResource = this.treeRoot.find(p => project.parent === p.id);
+				if (project.parentProjectId) {
+					const parentProjectResource = this.treeRoot.find(p => project.parentProjectId === p.id);
 					if (parentProjectResource) {
 						projectResource.parentProject = parentProjectResource;
 					}
@@ -113,30 +115,31 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		this.treeView = treeView;
 	}
 
-	getParent(element: IgnitionFileResource | IgnitionProjectResource): vscode.ProviderResult<IgnitionFileResource | IgnitionProjectResource> {
+	getParent(element: IgnitionFileResource): vscode.ProviderResult<IgnitionFileResource> {
 		if (element instanceof IgnitionProjectResource) {
 			return null;
 		} else {
-			return element.parent;
+			return element.parentResource;
 		}
 	}
 
-	getTreeItem(element: IgnitionFileResource | IgnitionProjectResource): vscode.TreeItem {
+	getTreeItem(element: IgnitionFileResource): vscode.TreeItem {
 		return element;
 	}
 
-	async getChildren(element?: IgnitionFileResource | IgnitionProjectResource): Promise<IgnitionFileResource[] | IgnitionProjectResource[]> {
+	async getChildren(element?: IgnitionFileResource): Promise<IgnitionFileResource[] | undefined> {
 		if (!element) {
 			return this.treeRoot;
-		} else if (element instanceof IgnitionProjectResource || element instanceof FolderResource || element instanceof ScriptResource) {
-			return element.children || [];
 		} else {
-			return [];
+			// Ensure only IgnitionFileResource types are returned
+			const filteredChildren = element.children?.filter(child => child instanceof IgnitionFileResource) as IgnitionFileResource[];
+			return filteredChildren.length > 0 ? filteredChildren : undefined;
 		}
 	}
+	
 
-	private async getIgnitionProjects(workspaceRoot: string): Promise<{ id: string, title: string, parent: string, path: string, relativePath: string }[]> {
-        const projects: { id: string, title: string, parent: string, path: string, relativePath: string }[] = [];
+	private async getIgnitionProjects(workspaceRoot: string): Promise<{ id: string, title: string, parentProjectId: string, path: string, relativePath: string }[]> {
+        const projects: { id: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
         const files = await vscode.workspace.findFiles('**/project.json');
 
         for (const file of files) {
@@ -148,16 +151,16 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
                 const relativePath = path.relative(workspaceRoot, projectDir);
                 const projectJson = JSON.parse(await fs.promises.readFile(projectJsonPath, 'utf-8'));
                 if (projectJson.title) {
-                    projects.push({ id: path.basename(projectDir), title: projectJson.title, parent: projectJson.parent, path: projectDir, relativePath });
+                    projects.push({ id: path.basename(projectDir), title: projectJson.title, parentProjectId: projectJson.parent, path: projectDir, relativePath });
                 }
             }
         }
 
         // Sort the project by their title and inheritance from the parent, with the parent project first
         projects.sort((a, b) => {
-            if (a.parent === b.id) {
+            if (a.parentProjectId === b.id) {
                 return -1;
-            } else if (b.parent === a.id) {
+            } else if (b.parentProjectId === a.id) {
                 return 1;
             } else {
                 return a.title.localeCompare(b.title);
@@ -194,22 +197,30 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		const projects = await this.getIgnitionProjects(this.workspaceRoot);
 		this._projects = projects;
 	
-		for (const project of projects) {
-			const projectResource = new IgnitionProjectResource(project.id, project.title, project.parent, project.path);
+		const projectStack: typeof projects = [...projects];
+		const createdProjects = new Set<string>();
 	
-			if (project.parent) {
-				// Look in the tree for another project whose id matches the parent project's id
-				const parentProjectResource = this.treeRoot.find(p => p.id === project.parent);
-				if (parentProjectResource) {
-					projectResource.parentProject = parentProjectResource;
-				}
+		while (projectStack.length > 0) {
+			const project = projectStack.shift()!;
+	
+			if (createdProjects.has(project.id)) {
+				continue;
 			}
 	
-			const projectJsonPath = path.join(project.path, 'project.json');
-			const projectJson = JSON.parse(await fs.promises.readFile(projectJsonPath, 'utf-8'));
-			if (projectJson.parent) {
-				// Find the parent project resource and link it
-				const parentProjectResource = this.treeRoot.find(p => p.id === projectJson.parent);
+			if (project.parentProjectId && !createdProjects.has(project.parentProjectId)) {
+				// If the parent project is not yet created, push the current project back onto the stack
+				projectStack.unshift(project);
+				const parentProject = projects.find(p => p.id === project.parentProjectId);
+				if (parentProject) {
+					projectStack.unshift(parentProject);
+				}
+				continue;
+			}
+	
+			const projectResource = new IgnitionProjectResource(project.id, project.title, project.parentProjectId, project.path);
+	
+			if (project.parentProjectId) {
+				const parentProjectResource = this.treeRoot.find(p => p.id === project.parentProjectId);
 				if (parentProjectResource) {
 					projectResource.parentProject = parentProjectResource;
 				}
@@ -222,15 +233,16 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			const scriptsPath = path.join(project.path, 'ignition/script-python');
 			const children = await this.processDirectory(scriptsPath, projectResource);
 			projectResource.children = children;
+	
+			createdProjects.add(project.id);
 		}
 	
-		// Set the initial project inheritance context after the treeRoot has been populated
 		await this.updateProjectInheritanceContext();
 	
 		this.refresh();
 	}
 
-	private async processDirectory(directoryPath: string, parentResource: IgnitionFileResource | IgnitionProjectResource): Promise<IgnitionFileResource[]> {
+	private async processDirectory(directoryPath: string, parentResource: AbstractResourceContainer): Promise<IgnitionFileResource[]> {
 		let resources: IgnitionFileResource[] = [];
 		const entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
 
@@ -275,11 +287,12 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		}
 	}
 
-	private async findMatchingTreeItemForResourceUri(resourceUri: vscode.Uri, items: IgnitionFileResource[] | IgnitionProjectResource[]): Promise<IgnitionFileResource | IgnitionProjectResource | undefined> {
+	private async findMatchingTreeItemForResourceUri(resourceUri: vscode.Uri, items: IgnitionFileResource[] | AbstractContentElement[]): Promise<IgnitionFileResource | undefined> {
 		for (const item of items) {
-			if ('resourceUri' in item && item.resourceUri && item.resourceUri.fsPath === resourceUri.fsPath) {
+			if (item instanceof IgnitionFileResource && item.resourceUri.fsPath === resourceUri.fsPath) {
 				return item;
 			}
+
 			if ('children' in item && item.children && item.children.length > 0) {
 				const foundInChildren = await this.findMatchingTreeItemForResourceUri(resourceUri, item.children);
 				if (foundInChildren) {
@@ -290,24 +303,29 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return undefined;
 	}
 
-	private async getParentResourceForUri(uri: vscode.Uri): Promise<IgnitionFileResource | IgnitionProjectResource | undefined> {
+	private async getParentResourceForUri(uri: vscode.Uri): Promise<AbstractResourceContainer | undefined> {
 		const relativePath = vscode.workspace.asRelativePath(uri, false);
 		const pathSegments = relativePath.split('/');
 
-		let parentResource: IgnitionFileResource | IgnitionProjectResource | undefined = undefined;
+		let parentResource: IgnitionFileResource | undefined = undefined;
 		for (let i = 1; i < pathSegments.length; i++) {
 			const parentPath = pathSegments.slice(0, i).join('/');
 			const parentUri = vscode.Uri.file(path.join(this.workspaceRoot || '', parentPath));
 			parentResource = await this.findMatchingTreeItemForResourceUri(parentUri, this.treeRoot);
+
 			if (parentResource) {
 				break;
 			}
 		}
 
-		return parentResource;
+		if (parentResource instanceof AbstractResourceContainer) {
+			return parentResource;
+		}
+	
+		return undefined
 	}
 
-	private async createScriptResourceForFile(uri: vscode.Uri, parentResource: IgnitionFileResource | IgnitionProjectResource): Promise<ScriptResource> {
+	private async createScriptResourceForFile(uri: vscode.Uri, parentResource: AbstractResourceContainer): Promise<ScriptResource> {
 		const codePyPath = path.join(uri.fsPath, 'code.py');
 		const scriptResource = new ScriptResource(path.basename(uri.fsPath), vscode.Uri.file(codePyPath), {
 			command: 'vscode.open',
@@ -338,7 +356,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 								this._onDidChangeTreeData.fire(parentResource); // Fire the event for the project resource
 							} else if (parentResource instanceof FolderResource || parentResource instanceof ScriptResource) {
 								parentResource.children?.push(newResource);
-								this._onDidChangeTreeData.fire(parentResource.parent); // Fire the event for the parent of the parent resource
+								this._onDidChangeTreeData.fire(parentResource.parentResource); // Fire the event for the parent of the parent resource
 							}
 						} else {
 							const newResource = new FolderResource(path.basename(uri.fsPath), uri, parentResource);
@@ -347,7 +365,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 								this._onDidChangeTreeData.fire(parentResource); // Fire the event for the project resource
 							} else if (parentResource instanceof FolderResource || parentResource instanceof ScriptResource) {
 								parentResource.children?.push(newResource);
-								this._onDidChangeTreeData.fire(parentResource.parent); // Fire the event for the parent of the parent resource
+								this._onDidChangeTreeData.fire(parentResource.parentResource); // Fire the event for the parent of the parent resource
 							}
 						}
 					} else {
@@ -358,7 +376,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 							this._onDidChangeTreeData.fire(parentResource); // Fire the event for the project resource
 						} else if (parentResource instanceof FolderResource || parentResource instanceof ScriptResource) {
 							parentResource.children?.push(scriptResource);
-							this._onDidChangeTreeData.fire(parentResource.parent); // Fire the event for the parent of the parent resource
+							this._onDidChangeTreeData.fire(parentResource.parentResource); // Fire the event for the parent of the parent resource
 						}
 					}
 				}
@@ -373,7 +391,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				const resourceToRemove = await this.findMatchingTreeItemForResourceUri(uri, this.treeRoot);
 				if (resourceToRemove) {
 					if (resourceToRemove instanceof IgnitionFileResource) {
-						const parentResource = resourceToRemove.parent;
+						const parentResource = resourceToRemove.parentResource;
 						if (parentResource instanceof IgnitionProjectResource) {
 							const updatedChildren = parentResource.children?.filter(child => child !== resourceToRemove);
 							parentResource.children = updatedChildren;
@@ -381,15 +399,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 						} else if (parentResource instanceof FolderResource || parentResource instanceof ScriptResource) {
 							const updatedChildren = parentResource.children?.filter(child => child !== resourceToRemove);
 							parentResource.children = updatedChildren;
-							this._onDidChangeTreeData.fire(parentResource.parent); // Fire the event for the parent of the parent resource
+							this._onDidChangeTreeData.fire(parentResource.parentResource); // Fire the event for the parent of the parent resource
 						}
 						if (resourceToRemove instanceof ScriptResource || resourceToRemove instanceof FolderResource) {
 							resourceToRemove.dispose(); // Call the dispose method on the removed resource
 						}
-					} else if (resourceToRemove instanceof IgnitionProjectResource) {
-						// If an entire project is deleted, refresh the root
-						this.treeRoot = this.treeRoot.filter(project => project !== resourceToRemove);
-						this._onDidChangeTreeData.fire(undefined); // Fire the event without any data to refresh the root
 					}
 				}
 			}
@@ -417,16 +431,20 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return undefined;
 	}
 
-	private findScriptResourceForFile(rootResource: IgnitionProjectResource | FolderResource | ScriptResource, fileUri: vscode.Uri): ScriptResource | undefined {
+	private findScriptResourceForFile(rootResource: AbstractResourceContainer, fileUri: vscode.Uri): ScriptResource | undefined {
 		if (rootResource instanceof ScriptResource && rootResource.resourceUri.fsPath === fileUri.fsPath) {
 			return rootResource;
 		}
 
 		if (rootResource.children) {
 			for (const child of rootResource.children) {
-				const foundResource = this.findScriptResourceForFile(child, fileUri);
-				if (foundResource) {
-					return foundResource;
+				if (child instanceof AbstractResourceContainer) {
+					const foundResource = this.findScriptResourceForFile(child, fileUri);
+					if (foundResource) {
+						return foundResource;
+					}
+				} else if (child instanceof ScriptResource && child.resourceUri.fsPath === fileUri.fsPath) {
+					return child;
 				}
 			}
 		}
@@ -445,22 +463,24 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return undefined;
 	}
 
-	private findScriptResourceByQualifiedPath(rootResource: IgnitionProjectResource | FolderResource | ScriptResource, inputPath: string): ScriptResource | undefined {
-		if (rootResource instanceof ScriptResource && rootResource.qualifiedScriptPath === inputPath) {
-			return rootResource;
+	private findScriptResourceByQualifiedPath(resource: IgnitionFileResource, inputPath: string): ScriptResource | undefined {
+		if (resource instanceof ScriptResource && resource.qualifiedScriptPath === inputPath) {
+			return resource;
 		}
-
-		if (rootResource.children) {
-			for (const child of rootResource.children) {
-				const foundResource = this.findScriptResourceByQualifiedPath(child, inputPath);
-				if (foundResource) {
-					return foundResource;
-				}
+	
+		// Iterate only over IgnitionFileResource instances
+		const childResources = resource.children?.filter(child => child instanceof IgnitionFileResource) as IgnitionFileResource[];
+		for (const child of childResources ?? []) {
+			const foundResource = this.findScriptResourceByQualifiedPath(child, inputPath);
+			if (foundResource) {
+				return foundResource;
 			}
 		}
-
+	
 		return undefined;
 	}
+	
+	
 
 	public getParentResources(resource: ScriptResource | undefined, inputPath: string): ScriptResource[] {
 		if (!resource) {
@@ -468,7 +488,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		}
 
 		const parentResources: ScriptResource[] = [];
-		let currentResource: IgnitionFileResource | IgnitionProjectResource | undefined = resource.parent;
+		let currentResource: IgnitionFileResource | undefined = resource.parentResource;
 
 		while (currentResource) {
 			if (currentResource instanceof ScriptResource && currentResource.resourceUri.fsPath.startsWith(path.join(inputPath))) {
@@ -477,7 +497,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			if (currentResource instanceof IgnitionProjectResource) {
 				break;
 			}
-			currentResource = currentResource.parent;
+			currentResource = currentResource.parentResource;
 		}
 
 		return parentResources;
@@ -504,11 +524,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		if (projectData) {
 			// Update the current project resource with the latest data
 			currentProject.title = projectData.title;
-			currentProject.parent = projectData.parent;
+			currentProject.parentProjectId = projectData.parentProjectId;
 
 			// Update the parent project reference
-			if (currentProject.parent) {
-				const parentProjectResource = this.treeRoot.find(p => p.id === currentProject.parent);
+			if (currentProject.parentProjectId) {
+				const parentProjectResource = this.treeRoot.find(p => p.id === currentProject.parentProjectId);
 				if (parentProjectResource) {
 					currentProject.parentProject = parentProjectResource;
 				} else {

@@ -108,14 +108,14 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 					const folderPath = path.dirname(resource.resourceUri.fsPath);
 					await fs.promises.rm(folderPath, { recursive: true, force: true });
 
-					const parentResource = resource.parent;
+					const parentResource = resource.parentResource;
 					if (parentResource instanceof FolderResource) {
 						parentResource.children = parentResource.children?.filter(child => child !== resource);
 					}
 				} else if (resource instanceof FolderResource) {
 					await fs.promises.rm(resource.resourceUri.fsPath, { recursive: true, force: true });
 
-					const parentResource = resource.parent;
+					const parentResource = resource.parentResource;
 					if (parentResource instanceof FolderResource) {
 						parentResource.children = parentResource.children?.filter(child => child !== resource);
 					}

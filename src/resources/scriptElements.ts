@@ -1,16 +1,17 @@
 import * as vscode from 'vscode';
 import { IgnitionFileResource } from './ignitionFileResource';
-import { IgnitionProjectResource } from './projectResource';
+import { AbstractContentElement } from './abstractContentElement';
 
-export abstract class ScriptElement extends IgnitionFileResource {
+export abstract class ScriptElement extends AbstractContentElement {
+	public iconPath: vscode.ThemeIcon = new vscode.ThemeIcon('symbol-namespace');
+	
     constructor(
         label: string,
         resourceUri: vscode.Uri,
-        collapsibleState: vscode.TreeItemCollapsibleState,
         command: vscode.Command,
-        parent: IgnitionFileResource | IgnitionProjectResource
+        parent: IgnitionFileResource
     ) {
-        super(label, resourceUri, collapsibleState, parent, command);
+		super(label, resourceUri, command, parent);
         this.contextValue = 'scriptElementObject';
     }
 
@@ -34,14 +35,14 @@ export abstract class ScriptElement extends IgnitionFileResource {
     }
 }
 
-export class ClassResource extends ScriptElement {
+export class ClassElement extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
         lineNumber: number,
         parent: IgnitionFileResource
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.None, {
+        super(label, resourceUri, {
             command: 'vscode.open',
             title: "Open Class",
             arguments: [resourceUri, { selection: new vscode.Range(lineNumber - 1, 0, lineNumber - 1, 0) }]
@@ -50,14 +51,14 @@ export class ClassResource extends ScriptElement {
     }
 }
 
-export class FunctionResource extends ScriptElement {
+export class FunctionElement extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
         lineNumber: number,
         parent: IgnitionFileResource
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.None, {
+        super(label, resourceUri, {
             command: 'vscode.open',
             title: "Open Function",
             arguments: [resourceUri, { selection: new vscode.Range(lineNumber - 1, 0, lineNumber - 1, 0) }]
@@ -66,14 +67,14 @@ export class FunctionResource extends ScriptElement {
     }
 }
 
-export class ConstantResource extends ScriptElement {
+export class ConstantElement extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
         lineNumber: number,
         parent: IgnitionFileResource
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.None, {
+        super(label, resourceUri, {
             command: 'vscode.open',
             title: "Open Constant",
             arguments: [resourceUri, { selection: new vscode.Range(lineNumber - 1, 0, lineNumber - 1, 0) }]

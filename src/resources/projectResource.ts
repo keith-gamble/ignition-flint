@@ -3,9 +3,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { IgnitionFileResource } from './ignitionFileResource';
 import { IgnitionFileSystemProvider } from '../providers/ignitionFileSystem';
+import { AbstractResourceContainer } from './abstractResourceContainer';
 
-export class IgnitionProjectResource extends vscode.TreeItem {
+export class IgnitionProjectResource extends AbstractResourceContainer {
     public parentProject?: IgnitionProjectResource;
+	public inheritedChildren: IgnitionFileResource[] = [];
+	
 
     disposables: vscode.Disposable[] = [];
     description: string;
@@ -13,12 +16,12 @@ export class IgnitionProjectResource extends vscode.TreeItem {
     constructor(
         public id: string,
         public title: string,
-        public parent: string,
+		public parentProjectId: string,
         public baseFilePath: string,
         public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
-        public children?: IgnitionFileResource[]
+        public children: IgnitionFileResource[] = []
     ) {
-        super(title, collapsibleState);
+        super(title, vscode.Uri.file(baseFilePath), collapsibleState, undefined);
         this.tooltip = `${this.title} - ${this.baseFilePath}`;
         this.iconPath = new vscode.ThemeIcon("project");
         this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);

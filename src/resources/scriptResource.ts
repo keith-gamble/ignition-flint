@@ -1,21 +1,23 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { AbstractResourceContainer } from './abstractResourceContainer';
+import { AbstractContentElement } from './abstractContentElement';
+import { TreeViewItem } from '../interfaces/treeViewItem';
 import { IgnitionFileResource } from './ignitionFileResource';
-import { IgnitionProjectResource } from './projectResource';
-import { ClassResource, FunctionResource, ConstantResource } from './scriptElements';
+import { ClassElement, ConstantElement, FunctionElement } from './scriptElements';
 
-export class ScriptResource extends IgnitionFileResource {
-    public scriptElements: (ClassResource | FunctionResource | ConstantResource)[] = [];
+export class ScriptResource extends IgnitionFileResource implements TreeViewItem {
+    public scriptElements: AbstractContentElement[] = [];
 	public qualifiedScriptPath: string;
 
     constructor(
         public readonly label: string,
         public readonly resourceUri: vscode.Uri,
         public readonly command: vscode.Command,
-        parent: IgnitionFileResource | IgnitionProjectResource,
-        children?: IgnitionFileResource[]
+        parentResource: AbstractResourceContainer,
+        children?: AbstractContentElement[]
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parent, command);
+        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parentResource, command);
         this.children = children;
         this.iconPath = new vscode.ThemeIcon('file-code');
         this.parsePythonFile();
@@ -24,11 +26,23 @@ export class ScriptResource extends IgnitionFileResource {
 		this.qualifiedScriptPath = this.getQualifiedScriptPath();
     }
 
+	// Method to add a script element
+    addScriptElement(element: AbstractContentElement): void {
+        this.scriptElements.push(element);
+    }
+
+	// Override getTreeItem to handle script elements
+    getTreeItem(): vscode.TreeItem {
+        const treeItem = super.getTreeItem(); // Assuming super.getTreeItem exists and returns a vscode.TreeItem
+        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed; // Or dynamically determine based on scriptElements
+        return treeItem;
+    }
+
     async parsePythonFile(): Promise<void> {
         try {
             const content = await fs.promises.readFile(this.resourceUri.fsPath, 'utf-8');
             const lines = content.split(/\r?\n/);
-            const resources: (ClassResource | FunctionResource | ConstantResource)[] = [];
+            const resources: (AbstractContentElement)[] = [];
             const classPattern = /^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\(.*\)\s*)?:/i;
             const functionPattern = /^def\s+([A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\))/;
             const constantPattern = /^([A-Z_][A-Z0-9_]*)\s*=/;
@@ -38,12 +52,12 @@ export class ScriptResource extends IgnitionFileResource {
                 const lineNumber = index + 1;
 
                 if (match = classPattern.exec(line)) {
-                    resources.push(new ClassResource(match[1], this.resourceUri, lineNumber, this));
+                    resources.push(new ClassElement(match[1], this.resourceUri, lineNumber, this));
                 } else if (match = functionPattern.exec(line)) {
                     const functionNameWithParams = match[1].trim();
-                    resources.push(new FunctionResource(functionNameWithParams, this.resourceUri, lineNumber, this));
+                    resources.push(new FunctionElement(functionNameWithParams, this.resourceUri, lineNumber, this));
                 } else if (match = constantPattern.exec(line)) {
-                    resources.push(new ConstantResource(match[1], this.resourceUri, lineNumber, this));
+                    resources.push(new ConstantElement(match[1], this.resourceUri, lineNumber, this));
                 }
             });
 
