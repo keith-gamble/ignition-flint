@@ -27,11 +27,28 @@ export function registerTextDocumentHandlers(context: vscode.ExtensionContext, s
 		}
 	}));
 
-	subscriptionManager.add(vscode.workspace.onDidSaveTextDocument((document) => {
-		if (document.fileName === 'code.py') {
-			fileSystemService.ignitionFileSystemProvider.refresh();
-		}
-	}));
+	// subscriptionManager.add(vscode.workspace.onDidOpenTextDocument(async (document) => {
+	// 	if (document.uri.scheme === 'file' && document.fileName.endsWith('code.py')) {
+	// 	const projectResource = fileSystemService.ignitionFileSystemProvider.treeRoot.find(project =>
+	// 		document.uri.fsPath.startsWith(project.baseFilePath)
+	// 	);
+	// 	if (projectResource) {
+	// 		await confirmPythonExtensionIsEnabled();
+	// 	}
+	// 	}
+	// }));
+
+	// subscriptionManager.add(vscode.workspace.onDidSaveTextDocument(async (document) => {
+	// 	if (document.uri.scheme === 'file' && document.fileName.endsWith('code.py')) {
+	// 		fileSystemService.ignitionFileSystemProvider.refresh();
+	// 		const projectResource = fileSystemService.ignitionFileSystemProvider.treeRoot.find(project =>
+	// 			document.uri.fsPath.startsWith(project.baseFilePath)
+	// 		);
+	// 		if (projectResource) {
+	// 			await confirmPythonExtensionIsEnabled();
+	// 		}
+	// 	}
+	// }));
 
 	subscriptionManager.add(vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor && editor.document.languageId === 'python') {

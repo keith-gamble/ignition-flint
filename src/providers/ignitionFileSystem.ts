@@ -11,7 +11,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 	private _projects: { title: string, path: string, relativePath: string }[] = [];
-	private treeRoot: IgnitionProjectResource[] = [];
+	public treeRoot: IgnitionProjectResource[] = [];
 	private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
 	private refreshTreeViewDebounced = debounce(this._refreshTreeView.bind(this), 500); // Debounce refreshTreeView by 500ms
 
@@ -124,6 +124,27 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 		return projects;
 	}
+
+	/**
+     * Find the Ignition project resource that the given file URI belongs to.
+     * @param fileUri The URI of the file for which to find the containing project.
+     * @returns The IgnitionProjectResource that contains the file, or undefined if not found.
+     */
+    public getCurrentProjectResource(fileUri: vscode.Uri): IgnitionProjectResource | undefined {
+        // Convert the file URI to a file system path
+        const filePath = fileUri.fsPath;
+
+        // Look through all projects to see which one contains this file
+        for (const project of this.treeRoot) {
+            // Check if the file path starts with the project's base file path
+            if (filePath.startsWith(project.baseFilePath)) {
+                return project;
+            }
+        }
+
+        // If no project was found that contains the file, return undefined
+        return undefined;
+    }
 
 	private async discoverProjectsAndWatch(): Promise<void> {
 		if (!this.workspaceRoot) return;
@@ -311,4 +332,90 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		}
 		this.refreshTreeView();
 	  }
+
+	  public getCurrentScriptResource(fileUri: vscode.Uri): ScriptResource | undefined {
+		// Convert the file URI to a file system path
+		const filePath = fileUri.fsPath;
+	
+		// Look through all projects to see which one contains this file
+		for (const project of this.treeRoot) {
+			// Check if the file path starts with the project's base file path
+			if (filePath.startsWith(project.baseFilePath)) {
+				// Find the ScriptResource instance for this file
+				const scriptResource = this.findScriptResourceForFile(project, fileUri);
+				if (scriptResource) {
+					return scriptResource;
+				}
+			}
+		}
+	
+		// If no ScriptResource was found, return undefined
+		return undefined;
+	}
+	
+	private findScriptResourceForFile(rootResource: IgnitionProjectResource | FolderResource | ScriptResource, fileUri: vscode.Uri): ScriptResource | undefined {
+		if (rootResource instanceof ScriptResource && rootResource.resourceUri.fsPath === fileUri.fsPath) {
+			return rootResource;
+		}
+	
+		if (rootResource.children) {
+			for (const child of rootResource.children) {
+				const foundResource = this.findScriptResourceForFile(child, fileUri);
+				if (foundResource) {
+					return foundResource;
+				}
+			}
+		}
+	
+		return undefined;
+	}
+
+	public getScriptResourceForPath(inputPath: string): ScriptResource | undefined {
+		for (const project of this.treeRoot) {
+			const scriptResource = this.findScriptResourceByQualifiedPath(project, inputPath);
+			if (scriptResource) {
+				return scriptResource;
+			}
+		}
+	
+		return undefined;
+	}
+	
+	private findScriptResourceByQualifiedPath(rootResource: IgnitionProjectResource | FolderResource | ScriptResource, inputPath: string): ScriptResource | undefined {
+		if (rootResource instanceof ScriptResource && rootResource.qualifiedScriptPath === inputPath) {
+			return rootResource;
+		}
+	
+		if (rootResource.children) {
+			for (const child of rootResource.children) {
+				const foundResource = this.findScriptResourceByQualifiedPath(child, inputPath);
+				if (foundResource) {
+					return foundResource;
+				}
+			}
+		}
+	
+		return undefined;
+	}
+
+	public getParentResources(resource: ScriptResource | undefined, inputPath: string): ScriptResource[] {
+		if (!resource) {
+			return [];
+		}
+	
+		const parentResources: ScriptResource[] = [];
+		let currentResource: IgnitionFileResource | IgnitionProjectResource | undefined = resource.parent;
+	
+		while (currentResource) {
+			if (currentResource instanceof ScriptResource && currentResource.resourceUri.fsPath.startsWith(path.join(inputPath))) {
+				parentResources.push(currentResource);
+			}
+			if (currentResource instanceof IgnitionProjectResource) {
+				break;
+			}
+			currentResource = currentResource.parent;
+		}
+	
+		return parentResources;
+	}
 }

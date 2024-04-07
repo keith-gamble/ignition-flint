@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IgnitionFileResource } from './ignitionFileResource';
 import { IgnitionProjectResource } from './projectResource';
 
-export abstract class ScriptObjectResource extends IgnitionFileResource {
+export abstract class ScriptElement extends IgnitionFileResource {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
@@ -34,7 +34,7 @@ export abstract class ScriptObjectResource extends IgnitionFileResource {
     }
 }
 
-export class ClassResource extends ScriptObjectResource {
+export class ClassResource extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
@@ -50,7 +50,7 @@ export class ClassResource extends ScriptObjectResource {
     }
 }
 
-export class FunctionResource extends ScriptObjectResource {
+export class FunctionResource extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,
@@ -66,7 +66,7 @@ export class FunctionResource extends ScriptObjectResource {
     }
 }
 
-export class ConstantResource extends ScriptObjectResource {
+export class ConstantResource extends ScriptElement {
     constructor(
         label: string,
         resourceUri: vscode.Uri,

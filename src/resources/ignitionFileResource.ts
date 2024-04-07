@@ -3,6 +3,7 @@ import { IgnitionProjectResource } from './projectResource';
 
 export abstract class IgnitionFileResource extends vscode.TreeItem {
     disposables: vscode.Disposable[] = [];
+	baseFilePath: string;
 
     constructor(
         public readonly label: string,
@@ -11,9 +12,11 @@ export abstract class IgnitionFileResource extends vscode.TreeItem {
         public readonly parent: IgnitionFileResource | IgnitionProjectResource,
         public readonly command?: vscode.Command,
         public children?: IgnitionFileResource[],
+		public parentResource?: IgnitionFileResource | IgnitionProjectResource
     ) {
         super(label, collapsibleState);
         this.command = command;
+		this.baseFilePath = resourceUri.fsPath;
     }
 
     dispose(): void {

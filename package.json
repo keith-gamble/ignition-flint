@@ -92,25 +92,25 @@
 				"title": "Add Script Module",
 				"category": "Ignition Flint",
 				"icon": "$(new-file)"
-			  },
-			  {
+			},
+			{
 				"command": "ignition-flint.add-script-package",
 				"title": "Add Script Package",
 				"category": "Ignition Flint",
 				"icon": "$(new-folder)"
-			  },
-			  {
+			},
+			{
 				"command": "ignition-flint.delete-script-module",
 				"title": "Delete Resource",
 				"category": "Ignition Flint",
 				"icon": "$(trash)"
-			  },
-			  {
+			},
+			{
 				"command": "ignition-flint.rename-resource",
 				"title": "Rename Resource",
 				"category": "Ignition Flint",
 				"icon": "$(pencil)"
-			  }
+			}
 		],
 		"menus": {
 			"editor/context": [
@@ -185,14 +185,14 @@
 					"icon": "$(new-folder)"
 				},
 				{
-				"command": "ignition-flint.delete-script-module",
-				"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
-				"icon": "$(trash)"
+					"command": "ignition-flint.delete-script-module",
+					"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
+					"icon": "$(trash)"
 				},
 				{
-				"command": "ignition-flint.rename-resource",
-				"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
-				"icon": "$(pencil)"
+					"command": "ignition-flint.rename-resource",
+					"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
+					"icon": "$(pencil)"
 				}
 			]
 		},
@@ -205,20 +205,23 @@
 					"contextualTitle": "Ignition Project Scripts"
 				}
 			]
-		  }
+		}
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.54.0",
 		"@types/glob": "^8.0.0",
 		"@types/mocha": "^10.0.0",
 		"@types/node": "16.x",
+		"@types/vscode": "^1.54.0",
+		"@vscode/test-electron": "^2.2.0",
 		"eslint": "^8.26.0",
 		"glob": "^8.0.3",
 		"mocha": "^10.1.0",
-		"typescript": "^4.8.4",
-		"@vscode/test-electron": "^2.2.0"
+		"typescript": "^4.8.4"
 	},
 	"scripts": {
 		"compile": "tsc -p ./"
-	  }	  
+	},
+	"dependencies": {
+		"vscode-languageclient": "^9.0.1"
+	}
 }

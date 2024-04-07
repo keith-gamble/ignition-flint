@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DependencyContainer } from './dependencyContainer';
 import { ScriptResource } from './resources/scriptResource';
 import { FolderResource } from './resources/folderResource';
-import { ScriptObjectResource } from './resources/scriptElements';
+import { ScriptElement } from './resources/scriptElements';
 import { buildResourceFileContents } from './utils/resourceFileUtils';
 import { openWithKindling } from './commands/kindlingIntegration';
 import { pasteAsJson } from './commands/jsonPaste';
@@ -37,7 +37,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 	registerCodeTypeCommands(context, dependencyContainer.getVirtualFileSystemProvider(), openIgnitionCode);
 
-	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', async (node: ScriptObjectResource) => {
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', async (node: ScriptElement) => {
 		const qualifiedPath = node.getFullyQualifiedPath();
 		await vscode.env.clipboard.writeText(qualifiedPath);
 		vscode.window.showInformationMessage(`Copied to clipboard: ${qualifiedPath}`);

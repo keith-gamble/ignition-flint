@@ -4,6 +4,7 @@ import { DependencyContainer } from './dependencyContainer';
 import { SubscriptionManager } from './utils/subscriptionManager';
 import { registerTextEditorSelectionHandler } from './eventHandlers/textEditorSelectionHandler';
 import { registerTextDocumentHandlers } from './eventHandlers/textDocumentHandler';
+import { registerPythonScriptCompletionProvider } from './python/pythonConfiguration';
 import { registerCommands } from './commandRegistration';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -22,6 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommands(context, dependencyContainer, subscriptionManager);
 	registerTextEditorSelectionHandler(context, subscriptionManager);
 	registerTextDocumentHandlers(context, subscriptionManager, fileSystemService);
+	console.log('Attempting to register completion provider.');
+	registerPythonScriptCompletionProvider(context, fileSystemService);
 
 	vscode.workspace.onDidSaveTextDocument(updateEditedCode);
 	context.subscriptions.push(subscriptionManager);
