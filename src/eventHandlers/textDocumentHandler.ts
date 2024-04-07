@@ -2,11 +2,15 @@ import * as vscode from 'vscode';
 import { createLineNumberToSymbolPathMapping } from '../encodedScriptEditing/documentParsing';
 import { SubscriptionManager } from '../utils/subscriptionManager';
 import { throttle } from '../utils/throttle';
-import { FileSystemService } from '../services/fileSystemService';
+// import { FileSystemService } from '../services/fileSystemService';
+// import { registerPythonScriptCompletionProvider } from '../python/pythonConfiguration';
+import { DependencyContainer } from '../dependencyContainer';
+import { updateEditedCode } from '../encodedScriptEditing/documentEditing';
+import { registerPythonScriptCompletionProvider } from '../python/pythonCompletion';
 
 const parsedJsonDocuments: Map<vscode.Uri, Map<number, string>> = new Map();
 
-export function registerTextDocumentHandlers(context: vscode.ExtensionContext, subscriptionManager: SubscriptionManager, fileSystemService: FileSystemService) {
+export function registerTextDocumentHandlers(context: vscode.ExtensionContext, subscriptionManager: SubscriptionManager, dependencyContainer: DependencyContainer) {
 	subscriptionManager.add(vscode.workspace.onDidOpenTextDocument((document) => {
 		if (document.languageId === 'json') {
 			createLineNumberToSymbolPathMapping(document);
@@ -27,32 +31,21 @@ export function registerTextDocumentHandlers(context: vscode.ExtensionContext, s
 		}
 	}));
 
-	// subscriptionManager.add(vscode.workspace.onDidOpenTextDocument(async (document) => {
-	// 	if (document.uri.scheme === 'file' && document.fileName.endsWith('code.py')) {
-	// 	const projectResource = fileSystemService.ignitionFileSystemProvider.treeRoot.find(project =>
-	// 		document.uri.fsPath.startsWith(project.baseFilePath)
-	// 	);
-	// 	if (projectResource) {
-	// 		await confirmPythonExtensionIsEnabled();
-	// 	}
-	// 	}
-	// }));
-
-	// subscriptionManager.add(vscode.workspace.onDidSaveTextDocument(async (document) => {
-	// 	if (document.uri.scheme === 'file' && document.fileName.endsWith('code.py')) {
-	// 		fileSystemService.ignitionFileSystemProvider.refresh();
-	// 		const projectResource = fileSystemService.ignitionFileSystemProvider.treeRoot.find(project =>
-	// 			document.uri.fsPath.startsWith(project.baseFilePath)
-	// 		);
-	// 		if (projectResource) {
-	// 			await confirmPythonExtensionIsEnabled();
-	// 		}
-	// 	}
-	// }));
+	subscriptionManager.add(vscode.workspace.onDidSaveTextDocument(async (document) => {
+		if (document.languageId === 'python') {
+			const fileSystemService = dependencyContainer.getFileSystemService();
+			const currentProject = fileSystemService.ignitionFileSystemProvider.getCurrentProjectResource(document.uri);
+			if (currentProject) {
+				await fileSystemService.ignitionFileSystemProvider.updateProjectInheritanceContext(currentProject);
+			}
+		}
+		updateEditedCode(document);
+	}));
 
 	subscriptionManager.add(vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor && editor.document.languageId === 'python') {
-			fileSystemService.ignitionFileSystemProvider.revealTreeItemForResourceUri(editor.document.uri);
+			dependencyContainer.getFileSystemService().ignitionFileSystemProvider.revealTreeItemForResourceUri(editor.document.uri);
 		}
 	}, null, context.subscriptions));
+
 }

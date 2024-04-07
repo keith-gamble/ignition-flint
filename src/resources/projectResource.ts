@@ -5,21 +5,25 @@ import { IgnitionFileResource } from './ignitionFileResource';
 import { IgnitionFileSystemProvider } from '../providers/ignitionFileSystem';
 
 export class IgnitionProjectResource extends vscode.TreeItem {
-	disposables: vscode.Disposable[] = [];
-	description: string;
+    public parentProject?: IgnitionProjectResource;
 
-	constructor(
-		public readonly title: string,
-		public readonly baseFilePath: string,
-		public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
-		public children?: IgnitionFileResource[]
-	) {
-		super(title, collapsibleState);
-		this.tooltip = `${this.title} - ${this.baseFilePath}`;
-		this.iconPath = new vscode.ThemeIcon("project");
-		this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);
-		this.contextValue = 'projectObject';
-	}
+    disposables: vscode.Disposable[] = [];
+    description: string;
+
+    constructor(
+        public id: string,
+        public title: string,
+        public parent: string,
+        public baseFilePath: string,
+        public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
+        public children?: IgnitionFileResource[]
+    ) {
+        super(title, collapsibleState);
+        this.tooltip = `${this.title} - ${this.baseFilePath}`;
+        this.iconPath = new vscode.ThemeIcon("project");
+        this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);
+        this.contextValue = 'projectObject';
+    }
 
 	watchProjectFiles(provider: IgnitionFileSystemProvider): vscode.Disposable {
 		const filePattern = new vscode.RelativePattern(this.baseFilePath, "**/*.{py,json}");

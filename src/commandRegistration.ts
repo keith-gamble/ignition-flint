@@ -56,7 +56,6 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 			let scriptDirectory;
 
 			if (fileResource instanceof IgnitionProjectResource) {
-				console.log("IgnitionProjectResource.baseFilePath: ", fileResource.baseFilePath);
 				scriptDirectory = path.join(fileResource.baseFilePath, 'ignition', 'script-python', scriptName);
 			} else {
 				scriptDirectory = path.join(fileResource.baseFilePath, scriptName);
