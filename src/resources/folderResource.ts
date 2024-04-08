@@ -11,11 +11,16 @@ export class FolderResource extends AbstractResourceContainer {
         public readonly label: string,
         public readonly resourceUri: vscode.Uri,
         parent: AbstractResourceContainer,
-        children: IgnitionFileResource[] = []
+        children: IgnitionFileResource[] = [],
+		public isInherited: boolean = false
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parent);
+        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parent, undefined, isInherited);
         this.children = children || [];
         this.contextValue = 'folderObject';
         this.baseFilePath = resourceUri.fsPath;
+
+        if (this.isInherited) {
+            this.iconPath = new vscode.ThemeIcon('file-symlink-directory');
+        }
     }
 }

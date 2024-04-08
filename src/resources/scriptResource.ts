@@ -15,15 +15,20 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         public readonly resourceUri: vscode.Uri,
         public readonly command: vscode.Command,
         parentResource: AbstractResourceContainer,
-        children?: AbstractContentElement[]
+        children?: AbstractContentElement[],
+		public isInherited: boolean = false
     ) {
-        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parentResource, command);
+        super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parentResource, command, children, isInherited);
         this.children = children;
         this.iconPath = new vscode.ThemeIcon('file-code');
         this.parsePythonFile();
         this.setupFileWatcher();
         this.contextValue = 'scriptObject';
 		this.qualifiedScriptPath = this.getQualifiedScriptPath();
+
+		if (this.isInherited) {
+            this.iconPath = new vscode.ThemeIcon('file-symlink-file');
+        }
     }
 
 	// Method to add a script element

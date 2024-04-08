@@ -163,4 +163,25 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 			}
 		}
 	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-view-options', async () => {
+		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
+		const options: vscode.QuickPickItem[] = [
+			{
+				label: showInheritedResources ? 'Hide Inherited Resources' : 'Show Inherited Resources',
+				description: 'Toggle the visibility of inherited resources in the Ignition Project Scripts view',
+				picked: showInheritedResources
+			}
+		];
+	
+		const selectedOption = await vscode.window.showQuickPick(options, {
+			placeHolder: 'Select a view option',
+			canPickMany: false
+		});
+	
+		if (selectedOption) {
+			await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
+			fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+		}
+	}));
 }

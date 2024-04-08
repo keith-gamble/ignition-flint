@@ -14,13 +14,19 @@ export abstract class IgnitionFileResource extends vscode.TreeItem implements Tr
         public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
         public readonly parentResource: AbstractResourceContainer | undefined,
         public readonly command?: vscode.Command,
-        public children?: IgnitionFileResource[] | AbstractContentElement[]
+        public children?: IgnitionFileResource[] | AbstractContentElement[],
+		public isInherited: boolean = false
     ) {
         super(label, collapsibleState);
         this.command = command;
-		this.baseFilePath = resourceUri.fsPath;
+        this.baseFilePath = resourceUri.fsPath;
+
+        // Set the iconPath based on the isInherited property
+        if (this.isInherited) {
+            this.iconPath = new vscode.ThemeIcon('file-symlink-file');
+        }
     }
-	
+
 	getTreeItem(): vscode.TreeItem {
 		throw new Error('Method not implemented.');
 	}

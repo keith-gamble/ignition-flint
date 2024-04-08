@@ -23,6 +23,17 @@
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title": "Ignition Flint",
+			"properties": {
+			"ignitionFlint.showInheritedResources": {
+				"type": "boolean",
+				"default": false,
+				"description": "Show inherited resources in the Ignition Project Scripts view."
+			}
+			}
+		},
 		"clipboardWrite": true,
 		"filesystem": [
 			{
@@ -110,6 +121,17 @@
 				"title": "Rename Resource",
 				"category": "Ignition Flint",
 				"icon": "$(pencil)"
+			},
+			{
+				"command": "ignition-flint.show-view-options",
+				"title": "Show View Options",
+				"icon": "$(more)",
+				"category": "Ignition Flint"
+			  },
+			{
+				"command": "ignition-flint.toggle-inherited-resource-visibility",
+				"title": "Toggle Inherited Resource Visibility",
+				"category": "Ignition Flint"
 			}
 		],
 		"menus": {
@@ -163,8 +185,14 @@
 					"when": "view == ignitionFileSystem",
 					"group": "navigation@+1",
 					"icon": "$(refresh)"
-				}
-			],
+				  },
+				  {
+					"command": "ignition-flint.show-view-options",
+					"when": "view == ignitionFileSystem",
+					"group": "navigation@+2",
+					"icon": "$(more)"
+				  }
+			  ],
 			"view/item/context": [
 				{
 					"when": "view == ignitionFileSystem && viewItem == scriptElementObject",

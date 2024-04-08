@@ -69,7 +69,7 @@ function collectSuggestionsFromProjectAndParents(projectResource: IgnitionProjec
 				}
 			}
 		});
-		
+
 		currentProject.inheritedChildren?.forEach(child => {
 			if (!suggestions.some(s => s.label === child.label)) {
 				if (child instanceof ScriptElement) {
@@ -107,15 +107,18 @@ function collectSuggestionsFromProjectAndParents(projectResource: IgnitionProjec
 }
 
 function createCompletionItemForResource(resource: IgnitionFileResource): vscode.CompletionItem {
-	const completionItem = new vscode.CompletionItem(resource.label, resource instanceof ScriptResource ? vscode.CompletionItemKind.File : vscode.CompletionItemKind.Folder);
-	completionItem.detail = resource instanceof ScriptResource ? 'Script' : 'Folder';
+    const completionItem = new vscode.CompletionItem(resource.label, resource instanceof ScriptResource ? vscode.CompletionItemKind.File : vscode.CompletionItemKind.Folder);
+    completionItem.detail = resource instanceof ScriptResource ? 'Script' : 'Folder';
 
-	// Set a higher sortText for folder resources to prioritize them
-	if (resource instanceof FolderResource) {
-		completionItem.sortText = `0_${resource.label}`;
-	}
+    // Set the isInherited property
+    resource.isInherited = resource.parentResource instanceof IgnitionProjectResource && resource.parentResource.inheritedChildren.includes(resource);
 
-	return completionItem;
+    // Set a higher sortText for folder resources to prioritize them
+    if (resource instanceof FolderResource) {
+        completionItem.sortText = `0_${resource.label}`;
+    }
+
+    return completionItem;
 }
 
 function createCompletionItemForScriptElement(element: AbstractContentElement): vscode.CompletionItem {
