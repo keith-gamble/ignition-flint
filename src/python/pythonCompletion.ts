@@ -55,48 +55,55 @@ async function provideCompletionItems(fileSystemService: FileSystemService, docu
 }
 
 function collectSuggestionsFromProjectAndParents(projectResource: IgnitionProjectResource): vscode.CompletionItem[] {
-    const suggestions: vscode.CompletionItem[] = [];
-    const visitedProjects = new Set<string>();
+	const suggestions: vscode.CompletionItem[] = [];
 
-    const collectSuggestionsRecursive = (currentProject: AbstractResourceContainer | undefined) => {
-        if (currentProject && !visitedProjects.has(currentProject.baseFilePath)) {
-            visitedProjects.add(currentProject.baseFilePath);
-            currentProject.children?.forEach(child => {
-                if (!suggestions.some(s => s.label === child.label)) {
-					if (child instanceof ScriptElement) {
-						const completionItem = createCompletionItemForScriptElement(child);
-						suggestions.push(completionItem);
-					} else if (child instanceof IgnitionFileResource) {
-						const completionItem = createCompletionItemForResource(child);
-						suggestions.push(completionItem);
-					}
-                }
-                if (child instanceof AbstractResourceContainer) {
-                    collectSuggestionsRecursive(child);
-                }
-            });
-        }
-    };
+	const collectSuggestionsRecursive = (currentProject: IgnitionProjectResource) => {
+		currentProject.children?.forEach(child => {
+			if (!suggestions.some(s => s.label === child.label)) {
+				if (child instanceof ScriptElement) {
+					const completionItem = createCompletionItemForScriptElement(child);
+					suggestions.push(completionItem);
+				} else if (child instanceof IgnitionFileResource) {
+					const completionItem = createCompletionItemForResource(child);
+					suggestions.push(completionItem);
+				}
+			}
+		});
+		
+		currentProject.inheritedChildren?.forEach(child => {
+			if (!suggestions.some(s => s.label === child.label)) {
+				if (child instanceof ScriptElement) {
+					const completionItem = createCompletionItemForScriptElement(child);
+					suggestions.push(completionItem);
+				} else if (child instanceof IgnitionFileResource) {
+					const completionItem = createCompletionItemForResource(child);
+					suggestions.push(completionItem);
+				}
+			}
+		});
+	};
 
-    collectSuggestionsRecursive(projectResource);
-    let currentProject: IgnitionProjectResource | undefined = projectResource.parentProject;
-    while (currentProject) {
-        collectSuggestionsRecursive(currentProject);
-        currentProject = currentProject.parentProject;
-    }
+	collectSuggestionsRecursive(projectResource);
+	let currentProject: IgnitionProjectResource | undefined = projectResource.parentProject;
+	console.log("Current project: ", currentProject);
 
-    // Sort the suggestions to prioritize folders over variables
-    suggestions.sort((a, b) => {
-        if (a.kind === vscode.CompletionItemKind.Folder && b.kind !== vscode.CompletionItemKind.Folder) {
-            return -1;
-        } else if (a.kind !== vscode.CompletionItemKind.Folder && b.kind === vscode.CompletionItemKind.Folder) {
-            return 1;
-        } else {
-            return 0;
-        }
-    });
+	while (currentProject) {
+		collectSuggestionsRecursive(currentProject);
+		currentProject = currentProject.parentProject;
+	}
 
-    return suggestions;
+	// Sort the suggestions to prioritize folders over variables
+	suggestions.sort((a, b) => {
+		if (a.kind === vscode.CompletionItemKind.Folder && b.kind !== vscode.CompletionItemKind.Folder) {
+			return -1;
+		} else if (a.kind !== vscode.CompletionItemKind.Folder && b.kind === vscode.CompletionItemKind.Folder) {
+			return 1;
+		} else {
+			return 0;
+		}
+	});
+
+	return suggestions;
 }
 
 function createCompletionItemForResource(resource: IgnitionFileResource): vscode.CompletionItem {
@@ -118,23 +125,25 @@ function createCompletionItemForScriptElement(element: AbstractContentElement): 
 }
 
 function findResourceByPath(resource: IgnitionFileResource, pathParts: string[]): IgnitionFileResource | undefined {
-    if (pathParts.length === 0) {
-        return resource;
-    }
-    const nextPart = pathParts.shift();
-    if (!nextPart) return undefined;
+	if (pathParts.length === 0) {
+		return resource;
+	}
+	const nextPart = pathParts.shift();
+	if (!nextPart) return undefined;
 
-    let nextResource = resource.children?.find(child => (child instanceof IgnitionFileResource || child instanceof AbstractContentElement) && child.label === nextPart) as IgnitionFileResource | AbstractContentElement | undefined;
+	let nextResource: IgnitionFileResource | AbstractContentElement | undefined = resource.children?.find((child: IgnitionFileResource | AbstractContentElement) => (child instanceof IgnitionFileResource || child instanceof AbstractContentElement) && child.label === nextPart);
 
-    if (!nextResource && resource instanceof IgnitionProjectResource && resource.parentProject) {
-        nextResource = findResourceByPath(resource.parentProject, pathParts);
-    } else if (nextResource && pathParts.length > 0) {
-        return findResourceByPath(nextResource as IgnitionFileResource, pathParts);
-    } else if (nextResource && pathParts.length === 0) {
-        return nextResource as IgnitionFileResource;
-    }
+	if (!nextResource && resource instanceof IgnitionProjectResource) {
+		nextResource = resource.inheritedChildren?.find((child: IgnitionFileResource | AbstractContentElement) => (child instanceof IgnitionFileResource || child instanceof AbstractContentElement) && child.label === nextPart);
+	}
 
-    return undefined;
+	if (nextResource && pathParts.length > 0) {
+		return findResourceByPath(nextResource as IgnitionFileResource, pathParts);
+	} else if (nextResource && pathParts.length === 0) {
+		return nextResource as IgnitionFileResource;
+	}
+
+	return undefined;
 }
 
 

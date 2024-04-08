@@ -233,7 +233,9 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			const scriptsPath = path.join(project.path, 'ignition/script-python');
 			const children = await this.processDirectory(scriptsPath, projectResource);
 			projectResource.children = children;
-	
+
+			await this.updateProjectInheritance(projectResource);
+
 			createdProjects.add(project.id);
 		}
 	
@@ -503,46 +505,28 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return parentResources;
 	}
 
+	private async updateProjectInheritance(project: IgnitionProjectResource): Promise<void> {
+        project.inheritedChildren = [];
+
+        if (project.parentProject) {
+            await this.updateProjectInheritance(project.parentProject);
+            project.inheritedChildren = [...project.parentProject.children || [], ...project.parentProject.inheritedChildren];
+        }
+    }
 
 	/**
 	 * Updates or verifies the project inheritance context for the specified project.
 	 * @param currentProject The current project resource to update the inheritance context for.
 	 */
-	public async updateProjectInheritanceContext(currentProject?: IgnitionProjectResource, holdRefresh?: boolean): Promise<void> {
-		// If we did not pass a currentProject, we should update the inheritance for all of the avialable projects
-		if (!currentProject) {
-			for (const project of this.treeRoot) {
-				await this.updateProjectInheritanceContext(project);
-			}
-			this.refreshTreeView();
-			return;
-		}
-
-		// Find the corresponding project in the _projects array
-		const projectData = this._projects.find(p => p.id === currentProject.id);
-
-		if (projectData) {
-			// Update the current project resource with the latest data
-			currentProject.title = projectData.title;
-			currentProject.parentProjectId = projectData.parentProjectId;
-
-			// Update the parent project reference
-			if (currentProject.parentProjectId) {
-				const parentProjectResource = this.treeRoot.find(p => p.id === currentProject.parentProjectId);
-				if (parentProjectResource) {
-					currentProject.parentProject = parentProjectResource;
-				} else {
-					currentProject.parentProject = undefined;
-				}
-			} else {
-				currentProject.parentProject = undefined;
-			}
-
-			// Trigger a refresh of the tree view or other UI components as necessary.
-			if (!holdRefresh) {
-				this.refreshTreeView();
-			}
-		}
-	}
+	public async updateProjectInheritanceContext(currentProject?: IgnitionProjectResource): Promise<void> {
+        if (!currentProject) {
+            for (const project of this.treeRoot) {
+                await this.updateProjectInheritance(project);
+            }
+        } else {
+            await this.updateProjectInheritance(currentProject);
+        }
+        this.refresh();
+    }
 }
 
