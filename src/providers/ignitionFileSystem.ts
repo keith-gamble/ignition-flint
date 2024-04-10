@@ -12,7 +12,7 @@ import { AbstractResourceContainer } from '../resources/abstractResourceContaine
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
-	private _projects: { id: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
+	private _projects: { projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
 	public treeRoot: IgnitionProjectResource[] = [];
 	private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
 	private refreshTreeViewDebounced = debounce(this._refreshTreeView.bind(this), 500); // Debounce refreshTreeView by 500ms
@@ -56,11 +56,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				newTreeRoot.push(existingProjectResource);
 			} else {
 				// Create a new project resource instance
-				const projectResource = new IgnitionProjectResource(project.id, project.title, project.parentProjectId, project.path);
+				const projectResource = new IgnitionProjectResource(project.projectId, project.title, project.parentProjectId, project.path);
 
 				// Set the parent project based on searching the existing tree
 				if (project.parentProjectId) {
-					const parentProjectResource = this.treeRoot.find(p => project.parentProjectId === p.id);
+					const parentProjectResource = this.treeRoot.find(p => project.parentProjectId === p.projectId);
 					if (parentProjectResource) {
 						projectResource.parentProject = parentProjectResource;
 					}
@@ -168,8 +168,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 
-	private async getIgnitionProjects(workspaceRoot: string): Promise<{ id: string, title: string, parentProjectId: string, path: string, relativePath: string }[]> {
-		const projects: { id: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
+	private async getIgnitionProjects(workspaceRoot: string): Promise<{ projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[]> {
+		const projects: { projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
 		const files = await vscode.workspace.findFiles('**/project.json');
 
 		for (const file of files) {
@@ -181,16 +181,16 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				const relativePath = path.relative(workspaceRoot, projectDir);
 				const projectJson = JSON.parse(await fs.promises.readFile(projectJsonPath, 'utf-8'));
 				if (projectJson.title) {
-					projects.push({ id: path.basename(projectDir), title: projectJson.title, parentProjectId: projectJson.parent, path: projectDir, relativePath });
+					projects.push({ projectId: path.basename(projectDir), title: projectJson.title, parentProjectId: projectJson.parent, path: projectDir, relativePath });
 				}
 			}
 		}
 
 		// sort the projects by inheritance so they are first
 		projects.sort((a, b) => {
-			if (a.parentProjectId === b.id) {
+			if (a.parentProjectId === b.projectId) {
 				return -1;
-			} else if (b.parentProjectId === a.id) {
+			} else if (b.parentProjectId === a.projectId) {
 				return 1;
 			} else {
 				return 0;
@@ -234,31 +234,31 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		while (projectStack.length > 0) {
 			const project = projectStack.shift()!;
 	
-			if (createdProjects.has(project.id)) {
+			if (createdProjects.has(project.projectId)) {
 				continue;
 			}
 	
 			if (project.parentProjectId && !createdProjects.has(project.parentProjectId)) {
 				// If the parent project is not yet created, push the current project back onto the stack
 				projectStack.unshift(project);
-				const parentProject = projects.find(p => p.id === project.parentProjectId);
+				const parentProject = projects.find(p => p.projectId === project.parentProjectId);
 				if (parentProject) {
 					projectStack.unshift(parentProject);
 				}
 				continue;
 			}
 	
-            const projectResource = new IgnitionProjectResource(project.id, project.title, project.parentProjectId, project.path);
+            const projectResource = new IgnitionProjectResource(project.projectId, project.title, project.parentProjectId, project.path);
 	
 			if (project.parentProjectId) {
-				const parentProjectResource = this.treeRoot.find(p => p.id === project.parentProjectId);
+				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
 				if (parentProjectResource) {
 					projectResource.parentProject = parentProjectResource;
 				}
 			}
 	
 			// Insert the project resource at the correct position based on its parent-child relationship
-			const parentIndex = this.treeRoot.findIndex(p => p.id === project.parentProjectId);
+			const parentIndex = this.treeRoot.findIndex(p => p.projectId === project.parentProjectId);
 			if (parentIndex !== -1) {
 				this.treeRoot.splice(parentIndex + 1, 0, projectResource);
 			} else {
@@ -272,7 +272,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
             projectResource.children = children;
             await this.updateProjectInheritance(projectResource);
 
-            createdProjects.add(project.id);
+            createdProjects.add(project.projectId);
         }
 	
 		await this.updateProjectInheritanceContext();
@@ -287,7 +287,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
         // Create a map of project IDs to project resources
         for (const project of projects) {
-            projectMap.set(project.id, project);
+            projectMap.set(project.projectId, project);
         }
 
         // Recursively sort the projects based on their parent-child relationship, making sure parents are first

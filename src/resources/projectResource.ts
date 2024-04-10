@@ -13,7 +13,7 @@ export class IgnitionProjectResource extends AbstractResourceContainer {
 	description: string;
 
 	constructor(
-		public id: string,
+		public projectId: string,
 		public title: string,
 		public parentProjectId: string,
 		public baseFilePath: string,
