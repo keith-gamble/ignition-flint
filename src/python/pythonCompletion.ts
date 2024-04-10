@@ -85,7 +85,6 @@ function collectSuggestionsFromProjectAndParents(projectResource: IgnitionProjec
 
 	collectSuggestionsRecursive(projectResource);
 	let currentProject: IgnitionProjectResource | undefined = projectResource.parentProject;
-	console.log("Current project: ", currentProject);
 
 	while (currentProject) {
 		collectSuggestionsRecursive(currentProject);

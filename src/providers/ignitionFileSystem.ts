@@ -24,10 +24,13 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 	refresh(data?: any): void {
-		this._onDidChangeTreeData.fire(data);
+		const newTreeRoot = this.sortProjects(this.treeRoot);
+		this.treeRoot = newTreeRoot;
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
 	public async refreshTreeView(): Promise<void> {
+		this._onDidChangeTreeData.fire(undefined);
 		return this.refreshTreeViewDebounced();
 	}
 
@@ -79,9 +82,9 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				existingProject.dispose();
 			}
 		}
-
+		
 		// Replace the tree root with the new tree root
-		this.treeRoot = newTreeRoot;
+		this.treeRoot = this.sortProjects(newTreeRoot);
 
 		// Trigger a refresh of the tree view
 		this._onDidChangeTreeData.fire(undefined);
@@ -137,7 +140,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			if (element.parentProject) {
 				// If the project has a parent project, get the inherited children
 				const parentScriptsPath = path.join(element.parentProject.baseFilePath, 'ignition', 'script-python');
-				inheritedChildren.push(...await this.processDirectory(parentScriptsPath, element, true));
+				inheritedChildren.push(...await this.processDirectory(parentScriptsPath, element, true, element));
 			}
 	
 			// Process the current project's directory
@@ -183,16 +186,17 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			}
 		}
 
-		// Sort the project by their title and inheritance from the parent, with the parent project first
+		// sort the projects by inheritance so they are first
 		projects.sort((a, b) => {
 			if (a.parentProjectId === b.id) {
 				return -1;
 			} else if (b.parentProjectId === a.id) {
 				return 1;
 			} else {
-				return a.title.localeCompare(b.title);
+				return 0;
 			}
 		});
+		
 
 		return projects;
 	}
@@ -278,46 +282,47 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 
 	private sortProjects(projects: IgnitionProjectResource[]): IgnitionProjectResource[] {
-		const sortedProjects: IgnitionProjectResource[] = [];
-		const projectMap = new Map<string, IgnitionProjectResource>();
+        const sortedProjects: IgnitionProjectResource[] = [];
+        const projectMap = new Map<string, IgnitionProjectResource>();
 
-		// Create a map of project IDs to project resources
-		for (const project of projects) {
-			projectMap.set(project.id, project);
-		}
+        // Create a map of project IDs to project resources
+        for (const project of projects) {
+            projectMap.set(project.id, project);
+        }
 
-		// Recursively sort the projects based on their parent-child relationship
-		const visitProject = (projectId: string) => {
-			if (projectMap.has(projectId)) {
-				const project = projectMap.get(projectId)!;
+        // Recursively sort the projects based on their parent-child relationship, making sure parents are first
+		const sortProjectsRecursive = (project: IgnitionProjectResource) => {
+			if (project.parentProject) {
+				sortProjectsRecursive(project.parentProject);
+			}
+
+			if (!sortedProjects.includes(project)) {
 				sortedProjects.push(project);
-				projectMap.delete(projectId);
-
-				if (project.parentProject) {
-					visitProject(project.parentProject.id);
-				}
 			}
 		};
 
-		// Start visiting projects from the root level
-		while (projectMap.size > 0) {
-			const projectId = projectMap.keys().next().value;
-			visitProject(projectId);
+		for (const project of projects) {
+			sortProjectsRecursive(project);
+
+			// Add any projects that were not included in the recursive sorting
+			if (!sortedProjects.includes(project)) {
+				sortedProjects.push(project);
+			}	
 		}
 
 		return sortedProjects;
-	}
+    }
 
-	private async processDirectory(directoryPath: string, parentResource: AbstractResourceContainer, isInherited: boolean = false): Promise<IgnitionFileResource[]> {
+	private async processDirectory(directoryPath: string, parentResource: AbstractResourceContainer, isInherited: boolean = false, visibleParentProject: IgnitionProjectResource | undefined = undefined): Promise<IgnitionFileResource[]> {
 		let resources: IgnitionFileResource[] = [];
 		const entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
 
-		if (directoryPath.endsWith('General')) {
-			console.log('Processing directory:', directoryPath, isInherited)
-		}
-
 		const folderResources: IgnitionFileResource[] = [];
 		const scriptResources: IgnitionFileResource[] = [];
+
+		if (!visibleParentProject) {
+			visibleParentProject = parentResource.getParentProject();
+		}
 
 		for (const entry of entries) {
 			const fullPath = path.join(directoryPath, entry.name);
@@ -330,7 +335,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 						arguments: [vscode.Uri.file(codePyPath)],
 					}, parentResource, undefined, isInherited);
 	
-					if (isInherited) {
+					if (isInherited && visibleParentProject) {
+						scriptResource.visibleProject = visibleParentProject;
 						scriptResource.collapsibleState = vscode.TreeItemCollapsibleState.None;
 						scriptResource.iconPath = new vscode.ThemeIcon('file-symlink-file');
 					} else {
@@ -340,7 +346,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
                     scriptResources.push(scriptResource);
                 } else {
                     const folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], isInherited);
-                    folderResource.children = await this.processDirectory(fullPath, folderResource, isInherited);
+					folderResource.visibleProject = visibleParentProject;
+                    folderResource.children = await this.processDirectory(fullPath, folderResource, isInherited, visibleParentProject);
                     folderResources.push(folderResource);
                 }
             }
@@ -631,7 +638,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		} else {
 			await this.updateProjectInheritance(currentProject);
 		}
-		this.refresh();
+		this.refreshTreeView();
 	}
 
 	private async cloneInheritedDirectory(directoryPath: string, parentResource: IgnitionProjectResource): Promise<IgnitionFileResource[]> {
@@ -673,6 +680,51 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		resources = [...folderResources, ...scriptResources];
 	
 		return resources;
+	}
+
+	public async overrideInheritedResource(resource: ScriptResource) {
+		// 1. Get the path of the inherited resource
+		const inheritedResourcePath = resource.resourceUri.fsPath;
+		// 2. Get the current project resource
+		const selectedProject = resource.visibleProject;
+	
+		if (!selectedProject) {
+			vscode.window.showErrorMessage('Failed to override inherited resource: Could not find the current project resource.');
+			return;
+		}
+	
+		if (!resource.parentResource) {
+			vscode.window.showErrorMessage('Failed to override inherited resource: The resource does not have a parent resource.');
+			return;
+		}
+
+		const relativePath = path.relative(path.dirname(selectedProject.baseFilePath), inheritedResourcePath).split(path.sep).slice(1).join(path.sep);
+	
+		const newResourcePath = path.join(selectedProject.baseFilePath, relativePath);
+		await fs.promises.mkdir(path.dirname(newResourcePath), { recursive: true });
+		await fs.promises.copyFile(path.join(path.dirname(inheritedResourcePath), 'code.py'), path.join(path.dirname(newResourcePath), 'code.py'));
+		await fs.promises.copyFile(path.join(path.dirname(inheritedResourcePath), 'resource.json'), path.join(path.dirname(newResourcePath), 'resource.json'));
+
+		// 4. Mark the new resource as overridden
+		const newResource = this.getScriptResourceForPath(newResourcePath);
+		if (newResource) {
+			newResource.isOverridden = true;
+		}
+	
+		// 5. Refresh the tree view to show the new overridden resource
+		this.refreshTreeView();
+	}
+	
+	public async discardOverriddenResource(resource: ScriptResource | FolderResource) {
+		console.log("Discarding overridden resource: ", resource.resourceUri.fsPath);
+		// 1. Delete the overridden resource from the file system
+		await fs.promises.rm(resource.resourceUri.fsPath, { recursive: true, force: true });
+	
+		// 2. Mark the resource as not overridden
+		resource.isOverridden = false;
+	
+		// 3. Refresh the tree view to show the inherited resource again
+		this.refreshTreeView();
 	}
 }
 

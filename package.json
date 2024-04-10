@@ -123,6 +123,18 @@
 				"icon": "$(pencil)"
 			},
 			{
+				"command": "ignition-flint.override-inherited-resource",
+				"title": "Override Inherited Resource",
+				"category": "Ignition Flint",
+				"icon": "$(replace)"
+			},
+			{
+				"command": "ignition-flint.discard-overridden-resource",
+				"title": "Discard Overridden Resource",
+				"category": "Ignition Flint",
+				"icon": "$(discard)"
+			},
+			{
 				"command": "ignition-flint.show-view-options",
 				"title": "Show View Options",
 				"icon": "$(more)",
@@ -221,6 +233,18 @@
 					"command": "ignition-flint.rename-resource",
 					"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
 					"icon": "$(pencil)"
+				},
+				{
+					"command": "ignition-flint.override-inherited-resource",
+					"when": "view == ignitionFileSystem && viewItem == scriptObject && !viewItem.isOverwritten",
+					"group": "inline",
+					"icon": "$(replace)"
+				},
+				{
+					"command": "ignition-flint.discard-overridden-resource",
+					"when": "view == ignitionFileSystem && viewItem == scriptObject && viewItem.isOverwritten",
+					"group": "inline",
+					"icon": "$(discard)"
 				}
 			]
 		},

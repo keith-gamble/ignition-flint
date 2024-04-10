@@ -29,7 +29,7 @@ function registerCodeTypeCommands(
 }
 
 export function registerCommands(context: vscode.ExtensionContext, dependencyContainer: DependencyContainer, subscriptionManager: any) {
-	const fileSystemService = dependencyContainer.getFileSystemService();
+	const ignitionFileSystemProvider = dependencyContainer.getFileSystemService().ignitionFileSystemProvider;
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.open-with-kindling', openWithKindling));
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.paste-as-json', pasteAsJson));
@@ -44,7 +44,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	}));
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.refresh-tree-view', () => {
-		fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+		ignitionFileSystemProvider.refreshTreeView();
 	}));
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.add-script-module', async (fileResource: IgnitionProjectResource | FolderResource) => {
@@ -66,7 +66,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 				const resourceFileContents = await buildResourceFileContents(context);
 				await fs.promises.writeFile(path.join(scriptDirectory, 'resource.json'), resourceFileContents);
 
-				fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+				ignitionFileSystemProvider.refreshTreeView();
 
 				const codePyPath = path.join(scriptDirectory, 'code.py');
 				const codePyUri = vscode.Uri.file(codePyPath);
@@ -92,7 +92,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 			try {
 				await fs.promises.mkdir(packageDirectory);
-				fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+				ignitionFileSystemProvider.refreshTreeView();
 			} catch (error: any) {
 				vscode.window.showErrorMessage(`Failed to create script package: ${error.message}`);
 			}
@@ -121,7 +121,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 					}
 				}
 
-				fileSystemService.ignitionFileSystemProvider.refresh();
+				ignitionFileSystemProvider.refresh();
 			} catch (error: any) {
 				vscode.window.showErrorMessage(`Failed to delete script module: ${error.message}`);
 			}
@@ -150,7 +150,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 				try {
 					await fs.promises.rename(oldPath, newPath);
-					fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+					ignitionFileSystemProvider.refreshTreeView();
 
 					if (resource instanceof ScriptResource) {
 						const newCodePyPath = path.join(newPath, 'code.py');
@@ -164,6 +164,22 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		}
 	}));
 
+	subscriptionManager.add(
+        vscode.commands.registerCommand('ignition-flint.override-inherited-resource', async (resource: ScriptResource) => {
+            if (resource.isInherited) {
+                await ignitionFileSystemProvider.overrideInheritedResource(resource);
+            }
+        })
+    );
+
+    subscriptionManager.add(
+        vscode.commands.registerCommand('ignition-flint.discard-overridden-resource', async (resource: ScriptResource | FolderResource) => {
+            if (resource.isOverridden) {
+                await ignitionFileSystemProvider.discardOverriddenResource(resource);
+            }
+        })
+    );
+	
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-view-options', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
 		const options: vscode.QuickPickItem[] = [
@@ -181,7 +197,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	
 		if (selectedOption) {
 			await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
-			fileSystemService.ignitionFileSystemProvider.refreshTreeView();
+			ignitionFileSystemProvider.refreshTreeView();
 		}
 	}));
 }

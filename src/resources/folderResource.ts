@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { IgnitionFileResource } from './ignitionFileResource';
 import { AbstractResourceContainer } from './abstractResourceContainer';
+import { IgnitionProjectResource } from './projectResource';
 
 export class FolderResource extends AbstractResourceContainer {
     baseFilePath: string;
     public children: IgnitionFileResource[] = [];
-
+	public visibleProject: IgnitionProjectResource;
+	
     constructor(
         public readonly label: string,
         public readonly resourceUri: vscode.Uri,
@@ -17,6 +19,7 @@ export class FolderResource extends AbstractResourceContainer {
         this.children = children || [];
         this.contextValue = 'folderObject';
         this.baseFilePath = resourceUri.fsPath;
+		this.visibleProject = this.getParentProject();
 
         if (this.isInherited) {
             this.iconPath = new vscode.ThemeIcon('file-symlink-directory');

@@ -7,6 +7,7 @@ import { TreeViewItem } from '../interfaces/treeViewItem';
 export abstract class IgnitionFileResource extends vscode.TreeItem implements TreeViewItem {
     disposables: vscode.Disposable[] = [];
 	baseFilePath: string;
+	public isOverridden: boolean = false;
 
     constructor(
         public readonly label: string,
@@ -26,6 +27,18 @@ export abstract class IgnitionFileResource extends vscode.TreeItem implements Tr
             this.iconPath = new vscode.ThemeIcon('file-symlink-file');
         }
     }
+
+	getParentProject(): IgnitionProjectResource {
+		if (this instanceof IgnitionProjectResource) {
+			return this;
+		} else if (this.parentResource instanceof IgnitionProjectResource) {
+			return this.parentResource;
+		} else if (this.parentResource) {
+			return this.parentResource.getParentProject();
+		} else {
+			throw new Error('Could not find parent project');
+		}
+	}
 
 	getTreeItem(): vscode.TreeItem {
 		throw new Error('Method not implemented.');

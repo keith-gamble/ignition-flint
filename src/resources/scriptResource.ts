@@ -5,10 +5,14 @@ import { AbstractContentElement } from './abstractContentElement';
 import { TreeViewItem } from '../interfaces/treeViewItem';
 import { IgnitionFileResource } from './ignitionFileResource';
 import { ClassElement, ConstantElement, FunctionElement } from './scriptElements';
+import { IgnitionProjectResource } from './projectResource';
+
+const BASE_FILE_ICON = new vscode.ThemeIcon('file-code');
 
 export class ScriptResource extends IgnitionFileResource implements TreeViewItem {
     public scriptElements: AbstractContentElement[] = [];
     public qualifiedScriptPath: string;
+	public visibleProject: IgnitionProjectResource;
 
     constructor(
         public readonly label: string,
@@ -16,18 +20,23 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         public readonly command: vscode.Command,
         parentResource: AbstractResourceContainer,
         children?: AbstractContentElement[],
-        public isInherited: boolean = false
+        public isInherited: boolean = false,
+		public isOverridden: boolean = false
     ) {
         super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parentResource, command, children, isInherited);
-        this.children = children;
-        this.iconPath = new vscode.ThemeIcon('file-code');
+		this.isOverridden = isOverridden;
+		this.children = children;
+        this.iconPath = BASE_FILE_ICON
         this.parsePythonFile();
         this.setupFileWatcher();
         this.contextValue = 'scriptObject';
         this.qualifiedScriptPath = this.getQualifiedScriptPath();
+		this.visibleProject = this.getParentProject();
 
         if (this.isInherited) {
             this.iconPath = new vscode.ThemeIcon('file-symlink-file');
+        } else if (this.isOverridden) {
+            this.iconPath = BASE_FILE_ICON;
         }
     }
 
