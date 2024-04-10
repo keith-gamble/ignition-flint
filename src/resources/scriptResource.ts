@@ -8,7 +8,7 @@ import { ClassElement, ConstantElement, FunctionElement } from './scriptElements
 
 export class ScriptResource extends IgnitionFileResource implements TreeViewItem {
     public scriptElements: AbstractContentElement[] = [];
-	public qualifiedScriptPath: string;
+    public qualifiedScriptPath: string;
 
     constructor(
         public readonly label: string,
@@ -16,7 +16,7 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         public readonly command: vscode.Command,
         parentResource: AbstractResourceContainer,
         children?: AbstractContentElement[],
-		public isInherited: boolean = false
+        public isInherited: boolean = false
     ) {
         super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parentResource, command, children, isInherited);
         this.children = children;
@@ -24,12 +24,13 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         this.parsePythonFile();
         this.setupFileWatcher();
         this.contextValue = 'scriptObject';
-		this.qualifiedScriptPath = this.getQualifiedScriptPath();
+        this.qualifiedScriptPath = this.getQualifiedScriptPath();
 
-		if (this.isInherited) {
+        if (this.isInherited) {
             this.iconPath = new vscode.ThemeIcon('file-symlink-file');
         }
     }
+
 
 	// Method to add a script element
     addScriptElement(element: AbstractContentElement): void {

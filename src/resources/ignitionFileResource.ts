@@ -11,7 +11,7 @@ export abstract class IgnitionFileResource extends vscode.TreeItem implements Tr
     constructor(
         public readonly label: string,
         public readonly resourceUri: vscode.Uri,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
+        public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
         public readonly parentResource: AbstractResourceContainer | undefined,
         public readonly command?: vscode.Command,
         public children?: IgnitionFileResource[] | AbstractContentElement[],
