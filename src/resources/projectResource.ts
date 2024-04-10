@@ -13,20 +13,28 @@ export class IgnitionProjectResource extends AbstractResourceContainer {
 	description: string;
 
 	constructor(
-		public projectId: string,
-		public title: string,
-		public parentProjectId: string,
-		public baseFilePath: string,
-		public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
-		public children: IgnitionFileResource[] = []
-	) {
-		super(title, vscode.Uri.file(baseFilePath), collapsibleState, undefined);
-		this.tooltip = `${this.title} - ${this.baseFilePath}`;
-		this.iconPath = new vscode.ThemeIcon("project");
-		this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);
-		this.contextValue = 'projectObject';
-	}
+        public projectId: string,
+        public title: string,
+        public parentProjectId: string,
+        public baseFilePath: string,
+        public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
+        public children: IgnitionFileResource[] = [],
+        public projectIndex: number = 1
+    ) {
+        super(title, vscode.Uri.file(baseFilePath), collapsibleState, undefined);
+        this.label = this.getUniqueProjectLabel();
+        this.tooltip = `${this.title} - ${this.baseFilePath}`;
+        this.iconPath = new vscode.ThemeIcon("project");
+        this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);
+        this.contextValue = 'projectObject';
+    }
 
+    private getUniqueProjectLabel(): string {
+        if (this.projectIndex > 1) {
+            return `${this.title} ${this.projectIndex}`;
+        }
+        return this.title;
+    }
 	watchProjectFiles(provider: IgnitionFileSystemProvider): vscode.Disposable {
 		const filePattern = new vscode.RelativePattern(this.baseFilePath, "**/*.{py,json}");
 		const projectJsonPattern = new vscode.RelativePattern(this.baseFilePath, "project.json");

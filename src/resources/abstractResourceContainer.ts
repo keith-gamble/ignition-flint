@@ -6,7 +6,7 @@ export abstract class AbstractResourceContainer extends IgnitionFileResource {
     public children: IgnitionFileResource[] | AbstractContentElement[] = [];
 
     constructor(
-        public readonly label: string,
+        public label: string,
         public readonly resourceUri: vscode.Uri,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly parentResource: AbstractResourceContainer | undefined,

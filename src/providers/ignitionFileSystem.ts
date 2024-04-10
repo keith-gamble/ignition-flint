@@ -38,7 +38,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		// Create a new tree root
 		const newTreeRoot: IgnitionProjectResource[] = [];
 
-		// Iterate over the existing projects and refresh each one
+		const projectTitleCounts: { [title: string]: number } = {};
+
 		for (const project of this._projects) {
 			const existingProjectResource = this.treeRoot.find(p => p.baseFilePath === project.path);
 			if (existingProjectResource) {
@@ -55,8 +56,15 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 				newTreeRoot.push(existingProjectResource);
 			} else {
-				// Create a new project resource instance
-				const projectResource = new IgnitionProjectResource(project.projectId, project.title, project.parentProjectId, project.path);
+				const projectResource = new IgnitionProjectResource(
+					project.projectId,
+					project.title,
+					project.parentProjectId,
+					project.path,
+					vscode.TreeItemCollapsibleState.Collapsed,
+					[],
+					projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
+				);
 
 				// Set the parent project based on searching the existing tree
 				if (project.parentProjectId) {
@@ -133,11 +141,14 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 	async getChildren(element?: IgnitionFileResource | AbstractResourceContainer): Promise<(IgnitionFileResource | AbstractContentElement)[] | undefined> {
+		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
+
+
 		if (!element) {
 			return this.treeRoot;
 		} else if (element instanceof IgnitionProjectResource) {
 			const inheritedChildren: IgnitionFileResource[] = [];
-			if (element.parentProject) {
+			if (element.parentProject && showInheritedResources) {
 				// If the project has a parent project, get the inherited children
 				const parentScriptsPath = path.join(element.parentProject.baseFilePath, 'ignition', 'script-python');
 				inheritedChildren.push(...await this.processDirectory(parentScriptsPath, element, true, element));
@@ -230,7 +241,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	
 		const projectStack: typeof projects = [...projects];
 		const createdProjects = new Set<string>();
-	
+		const projectTitleCounts: { [title: string]: number } = {};
+
 		while (projectStack.length > 0) {
 			const project = projectStack.shift()!;
 	
@@ -248,7 +260,15 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				continue;
 			}
 	
-            const projectResource = new IgnitionProjectResource(project.projectId, project.title, project.parentProjectId, project.path);
+            const projectResource = new IgnitionProjectResource(
+				project.projectId,
+				project.title,
+				project.parentProjectId,
+				project.path,
+				vscode.TreeItemCollapsibleState.Collapsed,
+				[],
+				projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
+			);
 	
 			if (project.parentProjectId) {
 				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
