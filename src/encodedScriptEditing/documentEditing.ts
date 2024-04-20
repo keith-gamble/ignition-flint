@@ -206,8 +206,8 @@ export async function getParentObjectFromDocument(document: vscode.TextDocument,
         try {
             parentSymbolObject = JSON.parse(parentSymbolContent);
         } catch (error) {
-            // Handle the case where the parentSymbolContent is not a valid JSON string
-            vscode.window.showErrorMessage(`Invalid JSON content: ${parentSymbolContent}`);
+            // The user is probably typing in the JSON object, so we can't parse it yet
+			return { symbolPath: '', parentObject: {} };
         }
     }
 

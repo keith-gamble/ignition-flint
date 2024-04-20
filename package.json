@@ -27,11 +27,11 @@
 			"type": "object",
 			"title": "Ignition Flint",
 			"properties": {
-			"ignitionFlint.showInheritedResources": {
-				"type": "boolean",
-				"default": false,
-				"description": "Show inherited resources in the Ignition Project Scripts view."
-			}
+				"ignitionFlint.showInheritedResources": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show inherited resources in the Ignition Project Scripts view."
+				}
 			}
 		},
 		"clipboardWrite": true,
@@ -123,6 +123,16 @@
 				"icon": "$(pencil)"
 			},
 			{
+				"command": "ignition-flint.openScriptResource",
+				"title": "Open Resource",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.openScriptResourceInNewTab",
+				"title": "Open Resource in New Tab",
+				"category": "Ignition Flint"
+			},
+			{
 				"command": "ignition-flint.override-inherited-resource",
 				"title": "Override Inherited Resource",
 				"category": "Ignition Flint",
@@ -139,7 +149,7 @@
 				"title": "Show View Options",
 				"icon": "$(more)",
 				"category": "Ignition Flint"
-			  },
+			},
 			{
 				"command": "ignition-flint.toggle-inherited-resource-visibility",
 				"title": "Toggle Inherited Resource Visibility",
@@ -197,17 +207,17 @@
 					"when": "view == ignitionFileSystem",
 					"group": "navigation@+1",
 					"icon": "$(refresh)"
-				  },
-				  {
+				},
+				{
 					"command": "ignition-flint.show-view-options",
 					"when": "view == ignitionFileSystem",
 					"group": "navigation@+2",
 					"icon": "$(more)"
-				  }
-			  ],
+				}
+			],
 			"view/item/context": [
 				{
-					"when": "view == ignitionFileSystem && viewItem == scriptElementObject",
+					"when": "view == ignitionFileSystem && (viewItem == scriptElementObject || viewItem == scriptObject)",
 					"command": "ignition-flint.copy-script-object-path-to-clipboard",
 					"group": "inline",
 					"icon": "$(clippy)"
@@ -235,6 +245,11 @@
 					"icon": "$(pencil)"
 				},
 				{
+					"command": "ignition-flint.openScriptResourceInNewTab",
+					"when": "view == ignitionFileSystem && viewItem == scriptObject",
+					"group": "navigation"
+				},
+				{
 					"command": "ignition-flint.override-inherited-resource",
 					"when": "view == ignitionFileSystem && viewItem == scriptObject && !viewItem.isOverwritten",
 					"group": "inline",
@@ -255,6 +270,21 @@
 					"name": "Ignition Project Scripts",
 					"icon": "$(refresh)",
 					"contextualTitle": "Ignition Project Scripts"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "ignitionFileSystem",
+				"contents": "No Ignition project scripts found in the current workspace."
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "ignition-flint-explorer",
+					"title": "Ignition Flint",
+					"icon": "images/assets/flint-icon.png"
 				}
 			]
 		}

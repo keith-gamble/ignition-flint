@@ -37,8 +37,19 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 	registerCodeTypeCommands(context, dependencyContainer.getVirtualFileSystemProvider(), openIgnitionCode);
 
-	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', async (node: ScriptElement) => {
-		const qualifiedPath = node.getFullyQualifiedPath();
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', async (node: ScriptElement | ScriptResource) => {
+		let qualifiedPath: string;
+
+		if (node instanceof ScriptElement) {
+			qualifiedPath = node.getFullyQualifiedPath();
+		} else if (node instanceof ScriptResource) {
+			qualifiedPath = node.qualifiedScriptPath;
+			qualifiedPath = qualifiedPath.replace(/\//g, '.');
+		} else {
+			vscode.window.showErrorMessage('Unsupported node type for copying path to clipboard.');
+			return;
+		}
+
 		await vscode.env.clipboard.writeText(qualifiedPath);
 		vscode.window.showInformationMessage(`Copied to clipboard: ${qualifiedPath}`);
 	}));
@@ -165,21 +176,21 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	}));
 
 	subscriptionManager.add(
-        vscode.commands.registerCommand('ignition-flint.override-inherited-resource', async (resource: ScriptResource) => {
-            if (resource.isInherited) {
-                await ignitionFileSystemProvider.overrideInheritedResource(resource);
-            }
-        })
-    );
+		vscode.commands.registerCommand('ignition-flint.override-inherited-resource', async (resource: ScriptResource) => {
+			if (resource.isInherited) {
+				await ignitionFileSystemProvider.overrideInheritedResource(resource);
+			}
+		})
+	);
 
-    subscriptionManager.add(
-        vscode.commands.registerCommand('ignition-flint.discard-overridden-resource', async (resource: ScriptResource | FolderResource) => {
-            if (resource.isOverridden) {
-                await ignitionFileSystemProvider.discardOverriddenResource(resource);
-            }
-        })
-    );
-	
+	subscriptionManager.add(
+		vscode.commands.registerCommand('ignition-flint.discard-overridden-resource', async (resource: ScriptResource | FolderResource) => {
+			if (resource.isOverridden) {
+				await ignitionFileSystemProvider.discardOverriddenResource(resource);
+			}
+		})
+	);
+
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-view-options', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
 		const options: vscode.QuickPickItem[] = [
@@ -189,15 +200,34 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 				picked: showInheritedResources
 			}
 		];
-	
+
 		const selectedOption = await vscode.window.showQuickPick(options, {
 			placeHolder: 'Select a view option',
 			canPickMany: false
 		});
-	
+
 		if (selectedOption) {
 			await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
 			ignitionFileSystemProvider.refreshTreeView();
 		}
 	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResource', async (resource: ScriptResource) => {
+		if (resource instanceof ScriptResource) {
+		  // Expand the tree item first
+		  vscode.window.showErrorMessage('This command is not yet implemented');
+		  await ignitionFileSystemProvider.expandScriptResource(resource);
+	  
+		  // Then open the document
+		  const document = await vscode.workspace.openTextDocument(resource.resourceUri);
+		  await vscode.window.showTextDocument(document);
+		}
+	  }));
+	  
+	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResourceInNewTab', async (resource: ScriptResource) => {
+		if (resource instanceof ScriptResource) {
+		  const document = await vscode.workspace.openTextDocument(resource.resourceUri);
+		  await vscode.window.showTextDocument(document, { preview: false });
+		}
+	  }));
 }

@@ -746,5 +746,32 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		// 3. Refresh the tree view to show the inherited resource again
 		this.refreshTreeView();
 	}
+
+	public async expandScriptResource(resource: ScriptResource): Promise<void> {
+		if (this.treeView) {
+		  // Find the parent resources of the script resource
+		  const parentResources = await this.findParentResources(resource);
+	  
+		  // Expand each parent resource in the tree view
+		  for (const parentResource of parentResources) {
+			await this.treeView.reveal(parentResource, { expand: true });
+		  }
+	  
+		  // Reveal the script resource in the tree view without selecting it
+		  await this.treeView.reveal(resource, { select: false, focus: false });
+		}
+	  }
+	  
+	  private async findParentResources(resource: ScriptResource): Promise<IgnitionFileResource[]> {
+		const parentResources: IgnitionFileResource[] = [];
+		let currentResource: IgnitionFileResource | undefined = resource.parentResource;
+	  
+		while (currentResource) {
+		  parentResources.unshift(currentResource);
+		  currentResource = currentResource.parentResource;
+		}
+	  
+		return parentResources;
+	  }
 }
 

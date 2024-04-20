@@ -41,11 +41,4 @@ export function registerTextDocumentHandlers(context: vscode.ExtensionContext, s
 		}
 		updateEditedCode(document);
 	}));
-
-	subscriptionManager.add(vscode.window.onDidChangeActiveTextEditor(editor => {
-		if (editor && editor.document.languageId === 'python') {
-			dependencyContainer.getFileSystemService().ignitionFileSystemProvider.revealTreeItemForResourceUri(editor.document.uri);
-		}
-	}, null, context.subscriptions));
-
 }
