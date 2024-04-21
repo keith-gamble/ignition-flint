@@ -41,7 +41,7 @@ export abstract class IgnitionFileResource extends vscode.TreeItem implements Tr
 	}
 
 	getTreeItem(): vscode.TreeItem {
-		throw new Error('Method not implemented.');
+		return this;
 	}
 
     dispose(): void {

@@ -38,9 +38,6 @@ async function provideCompletionItems(fileSystemService: FileSystemService, docu
 		// First get the currently typed resource, and trip any whitespace, then split by dot
 		const pathParts = basePath.trim().split('.');
 		const resource = findResourceByPath(projectResource, pathParts);
-		// Print out the type of the resource
-		console.log("Resource name: " + resource?.label + " Resource type: " + resource?.constructor.name);
-		console.log("Resource children: " + resource?.children?.map(child => "Child name: " + child?.label + " Child type: " + child?.constructor.name).join(", "));
 		if (resource) {
 			if (resource instanceof ScriptResource) {
 				suggestions = resource.scriptElements.map(element => createCompletionItemForScriptElement(element));

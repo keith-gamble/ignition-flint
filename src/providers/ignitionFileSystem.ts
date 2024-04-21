@@ -8,7 +8,7 @@ import { FolderResource } from '../resources/folderResource';
 import { debounce } from '../utils/debounce';
 import { AbstractContentElement } from '../resources/abstractContentElement';
 import { AbstractResourceContainer } from '../resources/abstractResourceContainer';
-import { ScriptElement } from '../resources/scriptElements';
+import { ClassElement, ScriptElement } from '../resources/scriptElements';
 
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
@@ -138,7 +138,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 	getTreeItem(element: IgnitionFileResource | AbstractContentElement): vscode.TreeItem {
-		return element;
+		return element.getTreeItem();
 	}
 
 	async getChildren(element?: IgnitionFileResource | AbstractResourceContainer): Promise<(IgnitionFileResource | AbstractContentElement)[] | undefined> {
@@ -167,6 +167,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			return element.children;
 		} else if (element instanceof ScriptResource && !element.isInherited) {
 			return element.scriptElements;
+		} else if (element instanceof ClassElement) {
+			return element.children;
 		} else {
 			return undefined;
 		}
@@ -346,7 +348,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		}
 
 		if (isInherited) {
-			console.log(`[processDirectory] Processing inherited directory: ${directoryPath}`);
 		}
 
 		for (const entry of entries) {
@@ -354,7 +355,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			if (entry.isDirectory()) {
 				if (await this.isDirectoryScriptResource(fullPath)) {
 					if (isInherited) {
-						console.log(`[processDirectory] Creating ScriptResource for directory: ${fullPath}`);
 					}
 					const codePyPath = path.join(fullPath, 'code.py');
 					const scriptResource = new ScriptResource(entry.name, vscode.Uri.file(codePyPath), {
@@ -374,7 +374,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					scriptResources.push(scriptResource);
 				} else {
 					if (isInherited) {
-						console.log(`[processDirectory] Creating FolderResource for directory: ${fullPath}`);
 					}
 					const folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], isInherited);
 					folderResource.visibleProject = visibleParentProject;
@@ -590,8 +589,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					continue;
 				}
 
-				// console.log("Qualified Path: " + qualifiedPath);
-				// console.log("Script Element Path: " + scriptElement.getFullyQualifiedPath()); 
 				if (scriptElement instanceof ScriptElement && scriptElement.getFullyQualifiedPath(false) === qualifiedPath) {
 					return scriptElement;
 				}
@@ -630,7 +627,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			for (const scriptElement of resource.scriptElements) {
 				if (scriptElement instanceof ScriptElement) {
 					const qualifiedName = scriptElement.getFullyQualifiedPath();
-					console.log(`Input Path: ${inputPath} Qualified Path: ${qualifiedName}`);
 					if (qualifiedName === inputPath) {
 						return scriptElement;
 					}
@@ -786,7 +782,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 	public async discardOverriddenResource(resource: ScriptResource | FolderResource) {
-		console.log("Discarding overridden resource: ", resource.resourceUri.fsPath);
 		// 1. Delete the overridden resource from the file system
 		await fs.promises.rm(resource.resourceUri.fsPath, { recursive: true, force: true });
 

@@ -7,6 +7,7 @@ export class FolderResource extends AbstractResourceContainer {
     baseFilePath: string;
     public children: IgnitionFileResource[] = [];
 	public visibleProject: IgnitionProjectResource;
+	public contextValue: string = 'folderObject';
 	
     constructor(
         public readonly label: string,
@@ -17,7 +18,6 @@ export class FolderResource extends AbstractResourceContainer {
     ) {
         super(label, resourceUri, vscode.TreeItemCollapsibleState.Collapsed, parent, undefined, isInherited);
         this.children = children || [];
-        this.contextValue = 'folderObject';
         this.baseFilePath = resourceUri.fsPath;
 		this.visibleProject = this.getParentProject();
 

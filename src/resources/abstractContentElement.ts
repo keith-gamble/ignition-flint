@@ -7,14 +7,15 @@ export abstract class AbstractContentElement extends vscode.TreeItem  implements
         public readonly label: string,
         public readonly resourceUri: vscode.Uri,
         public readonly command?: vscode.Command,
-		public readonly parentResource?: IgnitionFileResource,
-		public contextValue?: string
+		public readonly parentResource?: IgnitionFileResource | AbstractContentElement,
     ) {
 		super(label);
 	}
 
     getTreeItem(): vscode.TreeItem {
         const treeItem = new vscode.TreeItem(this.label);
+		treeItem.iconPath = this.iconPath;
+		treeItem.contextValue = this.contextValue;
         treeItem.command = this.command;
         treeItem.resourceUri = this.resourceUri;
         return treeItem;

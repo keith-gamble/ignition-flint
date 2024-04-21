@@ -13,6 +13,7 @@ import * as path from 'path';
 import { VirtualFileSystemProvider } from './providers/virtualFileSystem';
 import { openIgnitionCode } from './encodedScriptEditing/documentEditing';
 import { IgnitionProjectResource } from './resources/projectResource';
+import { AbstractContentElement } from './resources/abstractContentElement';
 
 function registerCodeTypeCommands(
 	context: vscode.ExtensionContext,
@@ -40,8 +41,8 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.copy-script-object-path-to-clipboard', async (node: ScriptElement | ScriptResource) => {
 		let qualifiedPath: string;
 
-		if (node instanceof ScriptElement) {
-			qualifiedPath = node.getFullyQualifiedPath();
+		if (node instanceof AbstractContentElement) {
+			qualifiedPath = node.getFullyQualifiedPath(true);
 		} else if (node instanceof ScriptResource) {
 			qualifiedPath = node.qualifiedScriptFilePath;
 			qualifiedPath = qualifiedPath.replace(/\//g, '.');

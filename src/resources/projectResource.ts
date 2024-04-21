@@ -8,6 +8,7 @@ import { AbstractResourceContainer } from './abstractResourceContainer';
 export class IgnitionProjectResource extends AbstractResourceContainer {
 	public parentProject?: IgnitionProjectResource;
 	public inheritedChildren: IgnitionFileResource[] = [];
+	public contextValue: string = 'projectObject';
 
 	disposables: vscode.Disposable[] = [];
 	description: string;
@@ -26,7 +27,6 @@ export class IgnitionProjectResource extends AbstractResourceContainer {
         this.tooltip = `${this.title} - ${this.baseFilePath}`;
         this.iconPath = new vscode.ThemeIcon("project");
         this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);
-        this.contextValue = 'projectObject';
     }
 
     private getUniqueProjectLabel(): string {
