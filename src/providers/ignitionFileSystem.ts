@@ -53,6 +53,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 				// Update the children of the existing project resource
 				existingProjectResource.children = this.updateChildResources(existingProjectResource.children, children);
+				// console.log(`[_refreshTreeView] Updated children for existing ProjectResource: ${existingProjectResource.title}. Children:`, existingProjectResource.children);
 
 				newTreeRoot.push(existingProjectResource);
 			} else {
@@ -65,6 +66,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					[],
 					projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 				);
+				// console.log(`[discoverProjectsAndWatch] Created ProjectResource: ${projectResource.title}`);
+
 
 				// Set the parent project based on searching the existing tree
 				if (project.parentProjectId) {
@@ -79,7 +82,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				const scriptsPath = path.join(project.path, 'ignition/script-python');
 				const children = await this.processDirectory(scriptsPath, projectResource);
 				projectResource.children = children;
-
+				// console.log(`[discoverProjectsAndWatch] Processed project directory for ${projectResource.title}. Children:`, children);
 				newTreeRoot.push(projectResource);
 			}
 		}
@@ -90,7 +93,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				existingProject.dispose();
 			}
 		}
-		
+
 		// Replace the tree root with the new tree root
 		this.treeRoot = this.sortProjects(newTreeRoot);
 
@@ -153,14 +156,14 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				const parentScriptsPath = path.join(element.parentProject.baseFilePath, 'ignition', 'script-python');
 				inheritedChildren.push(...await this.processDirectory(parentScriptsPath, element, true, element));
 			}
-	
+
 			// Process the current project's directory
 			const scriptsPath = path.join(element.baseFilePath, 'ignition', 'script-python');
 			const currentChildren = await this.processDirectory(scriptsPath, element);
-	
+
 			// Merge the inherited children and current children
 			const mergedChildren = [...inheritedChildren, ...currentChildren];
-	
+
 			return mergedChildren;
 		} else if (element instanceof FolderResource) {
 			return element.children;
@@ -207,7 +210,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				return 0;
 			}
 		});
-		
+
 
 		return projects;
 	}
@@ -235,21 +238,21 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 	private async discoverProjectsAndWatch(): Promise<void> {
 		if (!this.workspaceRoot) return;
-	
+
 		const projects = await this.getIgnitionProjects(this.workspaceRoot);
 		this._projects = projects;
-	
+
 		const projectStack: typeof projects = [...projects];
 		const createdProjects = new Set<string>();
 		const projectTitleCounts: { [title: string]: number } = {};
 
 		while (projectStack.length > 0) {
 			const project = projectStack.shift()!;
-	
+
 			if (createdProjects.has(project.projectId)) {
 				continue;
 			}
-	
+
 			if (project.parentProjectId && !createdProjects.has(project.parentProjectId)) {
 				// If the parent project is not yet created, push the current project back onto the stack
 				projectStack.unshift(project);
@@ -259,8 +262,8 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				}
 				continue;
 			}
-	
-            const projectResource = new IgnitionProjectResource(
+
+			const projectResource = new IgnitionProjectResource(
 				project.projectId,
 				project.title,
 				project.parentProjectId,
@@ -269,14 +272,15 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				[],
 				projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 			);
-	
+			// console.log(`[discoverProjectsAndWatch] Created ProjectResource: ${projectResource.title}`);
+
 			if (project.parentProjectId) {
 				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
 				if (parentProjectResource) {
 					projectResource.parentProject = parentProjectResource;
 				}
 			}
-	
+
 			// Insert the project resource at the correct position based on its parent-child relationship
 			const parentIndex = this.treeRoot.findIndex(p => p.projectId === project.parentProjectId);
 			if (parentIndex !== -1) {
@@ -284,17 +288,17 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			} else {
 				this.treeRoot.push(projectResource);
 			}
-	
+
 			projectResource.watchProjectFiles(this);
 
-            const scriptsPath = path.join(project.path, 'ignition/script-python');
-            const children = await this.processDirectory(scriptsPath, projectResource, false);
-            projectResource.children = children;
-            await this.updateProjectInheritance(projectResource);
+			const scriptsPath = path.join(project.path, 'ignition/script-python');
+			const children = await this.processDirectory(scriptsPath, projectResource, false);
+			projectResource.children = children;
+			await this.updateProjectInheritance(projectResource);
 
-            createdProjects.add(project.projectId);
-        }
-	
+			createdProjects.add(project.projectId);
+		}
+
 		await this.updateProjectInheritanceContext();
 		this.treeRoot = this.sortProjects(this.treeRoot);
 		this.refresh();
@@ -302,15 +306,15 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 
 	private sortProjects(projects: IgnitionProjectResource[]): IgnitionProjectResource[] {
-        const sortedProjects: IgnitionProjectResource[] = [];
-        const projectMap = new Map<string, IgnitionProjectResource>();
+		const sortedProjects: IgnitionProjectResource[] = [];
+		const projectMap = new Map<string, IgnitionProjectResource>();
 
-        // Create a map of project IDs to project resources
-        for (const project of projects) {
-            projectMap.set(project.projectId, project);
-        }
+		// Create a map of project IDs to project resources
+		for (const project of projects) {
+			projectMap.set(project.projectId, project);
+		}
 
-        // Recursively sort the projects based on their parent-child relationship, making sure parents are first
+		// Recursively sort the projects based on their parent-child relationship, making sure parents are first
 		const sortProjectsRecursive = (project: IgnitionProjectResource) => {
 			if (project.parentProject) {
 				sortProjectsRecursive(project.parentProject);
@@ -327,11 +331,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			// Add any projects that were not included in the recursive sorting
 			if (!sortedProjects.includes(project)) {
 				sortedProjects.push(project);
-			}	
+			}
 		}
 
 		return sortedProjects;
-    }
+	}
 
 	private async processDirectory(directoryPath: string, parentResource: AbstractResourceContainer, isInherited: boolean = false, visibleParentProject: IgnitionProjectResource | undefined = undefined): Promise<IgnitionFileResource[]> {
 		let resources: IgnitionFileResource[] = [];
@@ -344,17 +348,24 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			visibleParentProject = parentResource.getParentProject();
 		}
 
+		if (isInherited) {
+			console.log(`[processDirectory] Processing inherited directory: ${directoryPath}`);
+		}
+
 		for (const entry of entries) {
 			const fullPath = path.join(directoryPath, entry.name);
 			if (entry.isDirectory()) {
 				if (await this.isDirectoryScriptResource(fullPath)) {
+					if (isInherited) {
+						console.log(`[processDirectory] Creating ScriptResource for directory: ${fullPath}`);
+					}
 					const codePyPath = path.join(fullPath, 'code.py');
 					const scriptResource = new ScriptResource(entry.name, vscode.Uri.file(codePyPath), {
 						command: 'vscode.open',
 						title: 'Open Script',
 						arguments: [vscode.Uri.file(codePyPath)],
 					}, parentResource, undefined, isInherited);
-	
+
 					if (isInherited && visibleParentProject) {
 						scriptResource.visibleProject = visibleParentProject;
 						scriptResource.collapsibleState = vscode.TreeItemCollapsibleState.None;
@@ -362,16 +373,19 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					} else {
 						await scriptResource.parsePythonFile();
 					}
-					
-                    scriptResources.push(scriptResource);
-                } else {
-                    const folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], isInherited);
+
+					scriptResources.push(scriptResource);
+				} else {
+					if (isInherited) {
+						console.log(`[processDirectory] Creating FolderResource for directory: ${fullPath}`);
+					}
+					const folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], isInherited);
 					folderResource.visibleProject = visibleParentProject;
-                    folderResource.children = await this.processDirectory(fullPath, folderResource, isInherited, visibleParentProject);
-                    folderResources.push(folderResource);
-                }
-            }
-        }
+					folderResource.children = await this.processDirectory(fullPath, folderResource, isInherited, visibleParentProject);
+					folderResources.push(folderResource);
+				}
+			}
+		}
 
 		resources = [...folderResources, ...scriptResources];
 
@@ -611,38 +625,64 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private async updateProjectInheritance(project: IgnitionProjectResource): Promise<void> {
 		if (project.parentProject) {
 			await this.updateProjectInheritance(project.parentProject);
-	
-			const parentScriptsPath = path.join(project.parentProject.baseFilePath, 'ignition', 'script-python');
-			const inheritedChildren = await this.cloneInheritedDirectory(parentScriptsPath, project);
-	
+
 			// Create a map of the project's own children by their resource URI
 			const ownChildrenMap = new Map<string, IgnitionFileResource>();
 			for (const child of project.children || []) {
 				ownChildrenMap.set(child.resourceUri.fsPath, child);
 			}
-	
+
 			// Merge the inherited children with the project's own children
 			const mergedChildren: IgnitionFileResource[] = [];
-			for (const inheritedChild of inheritedChildren) {
+			for (const inheritedChild of project.parentProject.children || []) {
 				const ownChild = ownChildrenMap.get(inheritedChild.resourceUri.fsPath);
 				if (ownChild) {
 					// If the child exists in both the inherited and the project, use the project's version
 					mergedChildren.push(ownChild);
 					ownChildrenMap.delete(inheritedChild.resourceUri.fsPath);
 				} else {
-					// If the child only exists in the inherited, add it to the merged children
-					mergedChildren.push(inheritedChild);
+					// If the child only exists in the inherited, clone it and add it to the merged children
+					const clonedChild = this.cloneResource(inheritedChild, project);
+					mergedChildren.push(clonedChild);
 				}
 			}
-	
+
 			// Add any remaining own children that didn't exist in the inherited
 			for (const ownChild of ownChildrenMap.values()) {
 				mergedChildren.push(ownChild);
 			}
-	
+
 			project.inheritedChildren = mergedChildren;
 		} else {
 			project.inheritedChildren = [];
+		}
+	}
+
+	private cloneResource(resource: IgnitionFileResource, parentResource: IgnitionProjectResource): IgnitionFileResource {
+		if (resource instanceof ScriptResource) {
+			const clonedResource = new ScriptResource(
+				resource.label,
+				resource.resourceUri,
+				resource.command,
+				parentResource,
+				[],
+				true
+			);
+			clonedResource.iconPath = new vscode.ThemeIcon('file-symlink-file');
+			return clonedResource;
+		} else if (resource instanceof FolderResource) {
+			const clonedResource = new FolderResource(
+				resource.label,
+				resource.resourceUri,
+				parentResource,
+				[],
+				true
+			);
+			clonedResource.iconPath = new vscode.ThemeIcon('file-symlink-directory');
+			clonedResource.children = resource.children.map(child => this.cloneResource(child, parentResource));
+			return clonedResource;
+		} else {
+			throw new Error(`Unsupported resource type: ${resource.constructor.name}`);
 		}
 	}
 
@@ -664,10 +704,10 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private async cloneInheritedDirectory(directoryPath: string, parentResource: IgnitionProjectResource): Promise<IgnitionFileResource[]> {
 		let resources: IgnitionFileResource[] = [];
 		const entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
-	
+		console.log(`[cloneInheritedDirectory] Cloning inherited directory: ${directoryPath}`);
 		const folderResources: IgnitionFileResource[] = [];
 		const scriptResources: IgnitionFileResource[] = [];
-	
+
 		for (const entry of entries) {
 			const fullPath = path.join(directoryPath, entry.name);
 			if (entry.isDirectory()) {
@@ -675,8 +715,11 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					child.label === entry.name && child instanceof FolderResource
 				) as FolderResource;
 				if (!folderResource) {
+					console.log(`[cloneInheritedDirectory] Creating Inherited FolderResource for directory: ${fullPath}`);
 					folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], true);
 					folderResource.iconPath = new vscode.ThemeIcon('file-symlink-directory');
+				} else {
+					console.log(`[cloneInheritedDirectory] Reusing Inherited FolderResource for directory: ${fullPath}`);
 				}
 				folderResource.children = await this.cloneInheritedDirectory(fullPath, parentResource);
 				folderResources.push(folderResource);
@@ -686,19 +729,23 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					child.label === path.basename(path.dirname(fullPath)) && child instanceof ScriptResource
 				) as ScriptResource;
 				if (!scriptResource) {
+					console.log(`[cloneInheritedDirectory] Creating Inherited ScriptResource for directory: ${fullPath}`);
 					scriptResource = new ScriptResource(path.basename(path.dirname(fullPath)), vscode.Uri.file(codePyPath), {
 						command: 'vscode.open',
 						title: 'Open Script',
 						arguments: [vscode.Uri.file(codePyPath)],
 					}, parentResource, undefined, true);
 					scriptResource.iconPath = new vscode.ThemeIcon('file-symlink-file');
+				} else {
+					console.log(`[cloneInheritedDirectory] Reusing Inherited ScriptResource for directory: ${fullPath}`);
 				}
+
 				scriptResources.push(scriptResource);
 			}
 		}
-	
+
 		resources = [...folderResources, ...scriptResources];
-	
+
 		return resources;
 	}
 
@@ -707,19 +754,19 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		const inheritedResourcePath = resource.resourceUri.fsPath;
 		// 2. Get the current project resource
 		const selectedProject = resource.visibleProject;
-	
+
 		if (!selectedProject) {
 			vscode.window.showErrorMessage('Failed to override inherited resource: Could not find the current project resource.');
 			return;
 		}
-	
+
 		if (!resource.parentResource) {
 			vscode.window.showErrorMessage('Failed to override inherited resource: The resource does not have a parent resource.');
 			return;
 		}
 
 		const relativePath = path.relative(path.dirname(selectedProject.baseFilePath), inheritedResourcePath).split(path.sep).slice(1).join(path.sep);
-	
+
 		const newResourcePath = path.join(selectedProject.baseFilePath, relativePath);
 		await fs.promises.mkdir(path.dirname(newResourcePath), { recursive: true });
 		await fs.promises.copyFile(path.join(path.dirname(inheritedResourcePath), 'code.py'), path.join(path.dirname(newResourcePath), 'code.py'));
@@ -730,48 +777,48 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		if (newResource) {
 			newResource.isOverridden = true;
 		}
-	
+
 		// 5. Refresh the tree view to show the new overridden resource
 		this.refreshTreeView();
 	}
-	
+
 	public async discardOverriddenResource(resource: ScriptResource | FolderResource) {
 		console.log("Discarding overridden resource: ", resource.resourceUri.fsPath);
 		// 1. Delete the overridden resource from the file system
 		await fs.promises.rm(resource.resourceUri.fsPath, { recursive: true, force: true });
-	
+
 		// 2. Mark the resource as not overridden
 		resource.isOverridden = false;
-	
+
 		// 3. Refresh the tree view to show the inherited resource again
 		this.refreshTreeView();
 	}
 
 	public async expandScriptResource(resource: ScriptResource): Promise<void> {
 		if (this.treeView) {
-		  // Find the parent resources of the script resource
-		  const parentResources = await this.findParentResources(resource);
-	  
-		  // Expand each parent resource in the tree view
-		  for (const parentResource of parentResources) {
-			await this.treeView.reveal(parentResource, { expand: true });
-		  }
-	  
-		  // Reveal the script resource in the tree view without selecting it
-		  await this.treeView.reveal(resource, { select: false, focus: false });
+			// Find the parent resources of the script resource
+			const parentResources = await this.findParentResources(resource);
+
+			// Expand each parent resource in the tree view
+			for (const parentResource of parentResources) {
+				await this.treeView.reveal(parentResource, { expand: true });
+			}
+
+			// Reveal the script resource in the tree view without selecting it
+			await this.treeView.reveal(resource, { select: false, focus: false });
 		}
-	  }
-	  
-	  private async findParentResources(resource: ScriptResource): Promise<IgnitionFileResource[]> {
+	}
+
+	private async findParentResources(resource: ScriptResource): Promise<IgnitionFileResource[]> {
 		const parentResources: IgnitionFileResource[] = [];
 		let currentResource: IgnitionFileResource | undefined = resource.parentResource;
-	  
+
 		while (currentResource) {
-		  parentResources.unshift(currentResource);
-		  currentResource = currentResource.parentResource;
+			parentResources.unshift(currentResource);
+			currentResource = currentResource.parentResource;
 		}
-	  
+
 		return parentResources;
-	  }
+	}
 }
 
