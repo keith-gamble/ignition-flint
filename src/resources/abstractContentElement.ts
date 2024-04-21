@@ -19,4 +19,5 @@ export abstract class AbstractContentElement extends vscode.TreeItem  implements
         treeItem.resourceUri = this.resourceUri;
         return treeItem;
     }
+	
 }

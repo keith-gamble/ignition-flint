@@ -43,7 +43,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		if (node instanceof ScriptElement) {
 			qualifiedPath = node.getFullyQualifiedPath();
 		} else if (node instanceof ScriptResource) {
-			qualifiedPath = node.qualifiedScriptPath;
+			qualifiedPath = node.qualifiedScriptFilePath;
 			qualifiedPath = qualifiedPath.replace(/\//g, '.');
 		} else {
 			vscode.window.showErrorMessage('Unsupported node type for copying path to clipboard.');
@@ -228,6 +228,23 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		if (resource instanceof ScriptResource) {
 		  const document = await vscode.workspace.openTextDocument(resource.resourceUri);
 		  await vscode.window.showTextDocument(document, { preview: false });
+		}
+	  }));
+
+	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.navigate-to-element', async () => {
+		const elementPath = await vscode.window.showInputBox({
+		  prompt: 'Enter the full path to the element (e.g., model.interfaces.event_provider.EventProvider)',
+		  placeHolder: 'Element path'
+		});
+
+		if (!elementPath) {
+			return;
+		}
+
+		try {
+			ignitionFileSystemProvider.navigateToScriptElement(elementPath);
+		} catch (error: any) {
+			vscode.window.showErrorMessage(`Failed to navigate to element: ${error.message}`);
 		}
 	  }));
 }

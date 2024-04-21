@@ -8,6 +8,7 @@ import { FolderResource } from '../resources/folderResource';
 import { debounce } from '../utils/debounce';
 import { AbstractContentElement } from '../resources/abstractContentElement';
 import { AbstractResourceContainer } from '../resources/abstractResourceContainer';
+import { ScriptElement } from '../resources/scriptElements';
 
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
@@ -567,7 +568,48 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return undefined;
 	}
 
-	public getScriptResourceForPath(inputPath: string): ScriptResource | undefined {
+	private findScriptElementByQualifiedPath(qualifiedPath: string): ScriptResource | ScriptElement | undefined {
+		for (const project of this.treeRoot) {
+			const scriptElement = this.findScriptElementByQualifiedPathRecursive(project, qualifiedPath);
+			if (scriptElement) {
+				return scriptElement;
+			}
+		}
+	
+		return undefined;
+	}
+	
+	private findScriptElementByQualifiedPathRecursive(resource: IgnitionFileResource, qualifiedPath: string): ScriptResource | ScriptElement | undefined {
+		if (resource instanceof ScriptResource) {
+			if (resource.getFullyQualifiedPath() === qualifiedPath) {
+				return resource;
+			}
+	
+			for (const scriptElement of resource.scriptElements) {
+				if (!(scriptElement instanceof ScriptElement)) {
+					continue;
+				}
+
+				// console.log("Qualified Path: " + qualifiedPath);
+				// console.log("Script Element Path: " + scriptElement.getFullyQualifiedPath()); 
+				if (scriptElement instanceof ScriptElement && scriptElement.getFullyQualifiedPath(false) === qualifiedPath) {
+					return scriptElement;
+				}
+			}
+		}
+
+		const childResources = resource.children?.filter(child => child instanceof IgnitionFileResource) as IgnitionFileResource[];
+		for (const child of childResources ?? []) {
+			const foundElement = this.findScriptElementByQualifiedPathRecursive(child, qualifiedPath);
+			if (foundElement) {
+				return foundElement;
+			}
+		}
+	
+		return undefined;
+	}
+
+	public getScriptResourceForPath(inputPath: string): ScriptResource | ScriptElement | undefined {
 		for (const project of this.treeRoot) {
 			const scriptResource = this.findScriptResourceByQualifiedPath(project, inputPath);
 			if (scriptResource) {
@@ -578,11 +620,24 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		return undefined;
 	}
 
-	private findScriptResourceByQualifiedPath(resource: IgnitionFileResource, inputPath: string): ScriptResource | undefined {
-		if (resource instanceof ScriptResource && resource.qualifiedScriptPath === inputPath) {
-			return resource;
+	private findScriptResourceByQualifiedPath(resource: IgnitionFileResource, inputPath: string): ScriptResource | ScriptElement | undefined {
+		if (resource instanceof ScriptResource) {
+			if (resource.qualifiedScriptFilePath === inputPath) {
+				return resource;
+			}
+	
+			// Search for ScriptElement instances within the ScriptResource
+			for (const scriptElement of resource.scriptElements) {
+				if (scriptElement instanceof ScriptElement) {
+					const qualifiedName = scriptElement.getFullyQualifiedPath();
+					console.log(`Input Path: ${inputPath} Qualified Path: ${qualifiedName}`);
+					if (qualifiedName === inputPath) {
+						return scriptElement;
+					}
+				}
+			}
 		}
-
+	
 		// Iterate only over IgnitionFileResource instances
 		const childResources = resource.children?.filter(child => child instanceof IgnitionFileResource) as IgnitionFileResource[];
 		for (const child of childResources ?? []) {
@@ -591,7 +646,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				return foundResource;
 			}
 		}
-
+	
 		return undefined;
 	}
 
@@ -722,7 +777,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 		// 4. Mark the new resource as overridden
 		const newResource = this.getScriptResourceForPath(newResourcePath);
-		if (newResource) {
+		if (newResource && newResource instanceof ScriptResource) {
 			newResource.isOverridden = true;
 		}
 
@@ -767,6 +822,33 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		}
 
 		return parentResources;
+	}
+
+	public async navigateToScriptElement(elementPath: string) {
+		if (elementPath) {
+			const scriptElement = this.findScriptElementByQualifiedPath(elementPath);
+	
+			if (scriptElement instanceof ScriptResource) {
+				// Expand the tree item
+				await this.expandScriptResource(scriptElement);
+	
+				// Open the document and focus on the element
+				const document = await vscode.workspace.openTextDocument(scriptElement.resourceUri);
+				await vscode.window.showTextDocument(document);
+			} else if (scriptElement instanceof ScriptElement) {
+				// Open the document and focus on the script element
+				const document = await vscode.workspace.openTextDocument(scriptElement.resourceUri);
+				if (scriptElement.lineNumber === undefined) {
+					throw new Error(`Failed to find line number for script element: ${elementPath}`);
+				}
+	
+				await vscode.window.showTextDocument(document, {
+					selection: new vscode.Range(scriptElement.lineNumber - 1, 0, scriptElement.lineNumber - 1, 0)
+				});
+			} else {
+				throw new Error(`Failed to find script resource or element for path: ${elementPath}`);
+			}
+		}
 	}
 }
 

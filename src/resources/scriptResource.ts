@@ -11,7 +11,8 @@ const BASE_FILE_ICON = new vscode.ThemeIcon('file-code');
 
 export class ScriptResource extends IgnitionFileResource implements TreeViewItem {
     public scriptElements: AbstractContentElement[] = [];
-    public qualifiedScriptPath: string;
+    public qualifiedScriptFilePath: string;
+	public qualifiedScriptPath: string;
 	public visibleProject: IgnitionProjectResource;
 
     constructor(
@@ -30,7 +31,8 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         this.parsePythonFile();
         this.setupFileWatcher();
         this.contextValue = 'scriptObject';
-        this.qualifiedScriptPath = this.getQualifiedScriptPath();
+        this.qualifiedScriptFilePath = this.getqualifiedScriptFilePath();
+		this.qualifiedScriptPath = this.getFullyQualifiedPath();
 		this.visibleProject = this.getParentProject();
 
         if (this.isInherited) {
@@ -91,7 +93,7 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
         );
     }
 
-	private getQualifiedScriptPath(): string {
+	private getqualifiedScriptFilePath(): string {
 		let relativePath = vscode.workspace.asRelativePath(this.resourceUri, false).replace(/\\/g, '/');
 		const scriptPythonIndex = relativePath.indexOf('script-python/');
 		if (scriptPythonIndex !== -1) {
@@ -100,5 +102,10 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
 	
 		const referencePath = relativePath.split('/').slice(0, -1).join('/'); // Remove the 'code.py' part
 		return referencePath;
+	}
+
+
+	public getFullyQualifiedPath(): string {
+		return this.qualifiedScriptFilePath.replace(/\//g, '.');
 	}
 }

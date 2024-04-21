@@ -154,6 +154,11 @@
 				"command": "ignition-flint.toggle-inherited-resource-visibility",
 				"title": "Toggle Inherited Resource Visibility",
 				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.navigate-to-element",
+				"title": "Navigate to Script Element",
+				"category": "Ignition Flint"
 			}
 		],
 		"menus": {
@@ -260,6 +265,11 @@
 					"when": "view == ignitionFileSystem && viewItem == scriptObject && viewItem.isOverwritten",
 					"group": "inline",
 					"icon": "$(discard)"
+				},
+				{
+					"command": "ignition-flint.navigate-to-element",
+					"when": "view == ignitionFileSystem",
+					"group": "navigation"
 				}
 			]
 		},
