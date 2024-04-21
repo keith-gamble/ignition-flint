@@ -24,7 +24,6 @@ export function activate(context: vscode.ExtensionContext) {
     registerTextDocumentHandlers(context, subscriptionManager, dependencyContainer);
     registerPythonScriptCompletionProvider(context, fileSystemService);
 
-	// vscode.workspace.onDidSaveTextDocument(updateEditedCode);
 	context.subscriptions.push(subscriptionManager);
 	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);
 }

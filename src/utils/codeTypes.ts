@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { FlintError } from './textEncoding';
-import { VirtualFileSystemProvider } from '../providers/virtualFileSystem';
 
 export abstract class CodeType {
     abstract codeKey: string;

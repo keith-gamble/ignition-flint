@@ -53,7 +53,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 				// Update the children of the existing project resource
 				existingProjectResource.children = this.updateChildResources(existingProjectResource.children, children);
-				// console.log(`[_refreshTreeView] Updated children for existing ProjectResource: ${existingProjectResource.title}. Children:`, existingProjectResource.children);
 
 				newTreeRoot.push(existingProjectResource);
 			} else {
@@ -66,7 +65,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					[],
 					projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 				);
-				// console.log(`[discoverProjectsAndWatch] Created ProjectResource: ${projectResource.title}`);
 
 
 				// Set the parent project based on searching the existing tree
@@ -82,7 +80,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				const scriptsPath = path.join(project.path, 'ignition/script-python');
 				const children = await this.processDirectory(scriptsPath, projectResource);
 				projectResource.children = children;
-				// console.log(`[discoverProjectsAndWatch] Processed project directory for ${projectResource.title}. Children:`, children);
 				newTreeRoot.push(projectResource);
 			}
 		}
@@ -272,7 +269,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				[],
 				projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 			);
-			// console.log(`[discoverProjectsAndWatch] Created ProjectResource: ${projectResource.title}`);
 
 			if (project.parentProjectId) {
 				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
@@ -699,54 +695,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			await this.updateProjectInheritance(currentProject);
 		}
 		this.refreshTreeView();
-	}
-
-	private async cloneInheritedDirectory(directoryPath: string, parentResource: IgnitionProjectResource): Promise<IgnitionFileResource[]> {
-		let resources: IgnitionFileResource[] = [];
-		const entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
-		console.log(`[cloneInheritedDirectory] Cloning inherited directory: ${directoryPath}`);
-		const folderResources: IgnitionFileResource[] = [];
-		const scriptResources: IgnitionFileResource[] = [];
-
-		for (const entry of entries) {
-			const fullPath = path.join(directoryPath, entry.name);
-			if (entry.isDirectory()) {
-				let folderResource = parentResource.inheritedChildren.find(child =>
-					child.label === entry.name && child instanceof FolderResource
-				) as FolderResource;
-				if (!folderResource) {
-					console.log(`[cloneInheritedDirectory] Creating Inherited FolderResource for directory: ${fullPath}`);
-					folderResource = new FolderResource(entry.name, vscode.Uri.file(fullPath), parentResource, [], true);
-					folderResource.iconPath = new vscode.ThemeIcon('file-symlink-directory');
-				} else {
-					console.log(`[cloneInheritedDirectory] Reusing Inherited FolderResource for directory: ${fullPath}`);
-				}
-				folderResource.children = await this.cloneInheritedDirectory(fullPath, parentResource);
-				folderResources.push(folderResource);
-			} else if (await this.isDirectoryScriptResource(path.dirname(fullPath))) {
-				const codePyPath = path.join(path.dirname(fullPath), 'code.py');
-				let scriptResource = parentResource.inheritedChildren.find(child =>
-					child.label === path.basename(path.dirname(fullPath)) && child instanceof ScriptResource
-				) as ScriptResource;
-				if (!scriptResource) {
-					console.log(`[cloneInheritedDirectory] Creating Inherited ScriptResource for directory: ${fullPath}`);
-					scriptResource = new ScriptResource(path.basename(path.dirname(fullPath)), vscode.Uri.file(codePyPath), {
-						command: 'vscode.open',
-						title: 'Open Script',
-						arguments: [vscode.Uri.file(codePyPath)],
-					}, parentResource, undefined, true);
-					scriptResource.iconPath = new vscode.ThemeIcon('file-symlink-file');
-				} else {
-					console.log(`[cloneInheritedDirectory] Reusing Inherited ScriptResource for directory: ${fullPath}`);
-				}
-
-				scriptResources.push(scriptResource);
-			}
-		}
-
-		resources = [...folderResources, ...scriptResources];
-
-		return resources;
 	}
 
 	public async overrideInheritedResource(resource: ScriptResource) {

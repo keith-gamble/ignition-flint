@@ -2,11 +2,8 @@ import * as vscode from 'vscode';
 import { createLineNumberToSymbolPathMapping } from '../encodedScriptEditing/documentParsing';
 import { SubscriptionManager } from '../utils/subscriptionManager';
 import { throttle } from '../utils/throttle';
-// import { FileSystemService } from '../services/fileSystemService';
-// import { registerPythonScriptCompletionProvider } from '../python/pythonConfiguration';
 import { DependencyContainer } from '../dependencyContainer';
 import { updateEditedCode } from '../encodedScriptEditing/documentEditing';
-import { registerPythonScriptCompletionProvider } from '../python/pythonCompletion';
 
 const parsedJsonDocuments: Map<vscode.Uri, Map<number, string>> = new Map();
 

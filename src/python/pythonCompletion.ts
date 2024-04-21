@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { IgnitionProjectResource } from '../resources/projectResource';
 import { FileSystemService } from '../services/fileSystemService';
-import { ClassElement, ConstantElement, FunctionElement, ScriptElement } from '../resources/scriptElements';
+import { ClassElement, FunctionElement, ScriptElement } from '../resources/scriptElements';
 import { ScriptResource } from '../resources/scriptResource';
 import { IgnitionFileResource } from '../resources/ignitionFileResource';
 import { FolderResource } from '../resources/folderResource';
