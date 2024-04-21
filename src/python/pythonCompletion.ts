@@ -37,7 +37,10 @@ async function provideCompletionItems(fileSystemService: FileSystemService, docu
 		suggestions = collectSuggestionsFromProjectAndParents(projectResource);
 	} else {
 		// Find the specific resource based on the basePath to suggest its children or related items
-		const resource = findResourceByPath(projectResource, basePath.split('.'));
+		// First get the currently typed resource, and trip any whitespace, then split by dot
+		const pathParts = basePath.trim().split('.');
+		const resource = findResourceByPath(projectResource, pathParts);
+		console.log('resource', resource?.baseFilePath);
 		if (resource) {
 			if (resource instanceof ScriptResource) {
 				suggestions = resource.scriptElements.map(element => createCompletionItemForScriptElement(element));
@@ -127,6 +130,7 @@ function createCompletionItemForScriptElement(element: AbstractContentElement): 
 }
 
 function findResourceByPath(resource: IgnitionFileResource, pathParts: string[]): IgnitionFileResource | undefined {
+	console.log("Looking for resource by path", pathParts);
 	if (pathParts.length === 0) {
 		return resource;
 	}
