@@ -17,12 +17,27 @@ Flint for Ignition integrates with Kindling, a utility created by Inductive Auto
 - **Using the Feature**: Right-click on a `.gwbk` file within VS Code, and select "Open with Kindling" to initiate. This seamless integration facilitates the exploration and modification of gateway backups, streamlining project management tasks.
 
 ### Broad Scripting Support
-The extension offers comprehensive support for various Ignition script types, including script actions, script transforms, custom methods, message handlers, and tag event scripts. This broad support ensures developers can efficiently manage and edit a wide range of scripting tasks within their Ignition projects.
+The extension offers comprehensive support for various Ignition script types, including script actions, script transforms, custom methods, message handlers, tag event scripts, and property change scripts. This broad support ensures developers can efficiently manage and edit a wide range of scripting tasks within their Ignition projects.
 
 ### Copy as JSON Function
 The `Copy as JSON` feature is designed to enhance the development workflow by allowing developers to easily convert Ignition's printed scripting and configuration data into a JSON format suitable for documentation, sharing, or further processing. This functionality recognizes and respects the complexity of Ignition's data structures, ensuring accurate and user-friendly JSON representation.
 
 - **Using the Feature**: Simply select where you would like to add it into a text file, right-click, and select `Copy as JSON`. The extension will convert the selected data into a well-formatted JSON string and copy it to your clipboard, ready for pasting wherever you need it.
+
+### Ignition Project Script Explorer
+Flint for Ignition introduces a new explorer view called "Ignition Project Scripts" that provides a hierarchical view of all the scripts in your Ignition projects. This feature enables developers to easily navigate through script resources, packages, and modules, making it more convenient to locate and manage scripts within the project structure.
+
+- **Using the Feature**: Open the "Ignition Project Scripts" view in the VS Code explorer sidebar to access the hierarchical representation of your project's scripts. From here, you can expand and collapse folders, open script files, and perform various actions such as adding, deleting, and renaming script resources.
+
+### Script Element Navigation and Code Completion
+Flint for Ignition offers advanced navigation and code completion capabilities for script elements within your Ignition projects. Developers can quickly navigate to specific script elements, such as functions, classes, and methods, using the "Navigate to Script Element" command. Additionally, the extension provides intelligent code completion suggestions based on the project's script structure, making it easier to write and reference code elements.
+
+- **Using the Feature**: To navigate to a specific script element, use the "Navigate to Script Element" command from the command palette or the context menu in the "Ignition Project Scripts" view. Start typing the path to the desired element, and the extension will provide suggestions for auto-completion. Once selected, the corresponding script file will open, and the cursor will be positioned at the specified element.
+
+### Inherited Resource Management
+Flint for Ignition introduces functionality to manage inherited resources in Ignition projects. Developers can now easily override inherited script resources, making it convenient to customize and extend functionality while maintaining the project's inheritance structure. The extension also provides options to discard overridden resources and revert to the inherited version when needed.
+
+- **Using the Feature**: In the "Ignition Project Scripts" view, inherited resources are indicated with a special icon. To override an inherited resource, right-click on it and select "Override Inherited Resource." The overridden resource will be created in the current project, allowing you to modify it independently. To discard an overridden resource and revert to the inherited version, right-click on the overridden resource and select "Discard Overridden Resource."
 
 ## Installation and Usage
 
@@ -35,6 +50,12 @@ The `Copy as JSON` feature is designed to enhance the development workflow by al
 4. **Managing Gateway Backups**: Right-click a `.gwbk` file and choose "Open with Kindling" for direct access to backup management features.
 
 5. **Copying as JSON**: Use the `Copy as JSON` feature to quickly convert unicode json strings from Ignition into JSON format for easy sharing and documentation.
+
+6. **Exploring Project Scripts**: Open the "Ignition Project Scripts" view in the VS Code explorer sidebar to navigate and manage your project's script resources.
+
+7. **Navigating to Script Elements**: Use the "Navigate to Script Element" command to quickly jump to specific script elements within your project.
+
+8. **Managing Inherited Resources**: Override and discard inherited resources using the context menu options in the "Ignition Project Scripts" view.
 
 ## Kindling: A Closer Look
 
@@ -51,5 +72,3 @@ We encourage the community to share feedback and contribute to Flint for Ignitio
 Flint for Ignition is released under the MIT License. Detailed licensing information can be found in the [LICENSE](https://github.com/keith-gamble/ignition-flint/blob/main/LICENSE) file in the GitHub repository.
 
 ---
-
-Flint for Ignition seeks to provide a robust, efficient, and enjoyable development experience for Ignition platform projects. With its focus on easing script editing and enhancing project management through Kindling integration, this extension is an invaluable tool for any developer working in the Ignition ecosystem.
