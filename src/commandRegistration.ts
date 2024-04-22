@@ -192,26 +192,39 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		})
 	);
 
-	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-view-options', async () => {
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-options', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
-		const options: vscode.QuickPickItem[] = [
+		interface CustomQuickPickItem extends vscode.QuickPickItem {
+			command: string;
+		}
+
+		const options: CustomQuickPickItem[] = [
 			{
-				label: showInheritedResources ? 'Hide Inherited Resources' : 'Show Inherited Resources',
-				description: 'Toggle the visibility of inherited resources in the Ignition Project Scripts view',
-				picked: showInheritedResources
+				label: 'Search for Code',
+				description: 'Search for a specific code element',
+				command: 'ignition-flint.navigate-to-element'
+			},
+			{
+				label: showInheritedResources ? 'Hide Inherited Code' : 'Show Inherited Code',
+				description: 'Toggle the visibility of inherited resources',
+				command: 'ignition-flint.toggle-inherited-resource-visibility'
 			}
 		];
-
+	  
 		const selectedOption = await vscode.window.showQuickPick(options, {
-			placeHolder: 'Select a view option',
-			canPickMany: false
+		  placeHolder: 'Select an option:'
 		});
-
+	  
 		if (selectedOption) {
-			await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
-			ignitionFileSystemProvider.refreshTreeView();
+		  vscode.commands.executeCommand(selectedOption.command);
 		}
-	}));
+	  }));
+	  
+	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.toggle-inherited-resource-visibility', async () => {
+		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
+		await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
+		ignitionFileSystemProvider.refreshTreeView();
+	  }));
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResource', async (resource: ScriptResource) => {
 		if (resource instanceof ScriptResource) {

@@ -145,8 +145,8 @@
 				"icon": "$(discard)"
 			},
 			{
-				"command": "ignition-flint.show-view-options",
-				"title": "Show View Options",
+				"command": "ignition-flint.show-options",
+				"title": "Show Options",
 				"icon": "$(more)",
 				"category": "Ignition Flint"
 			},
@@ -214,10 +214,9 @@
 					"icon": "$(refresh)"
 				},
 				{
-					"command": "ignition-flint.show-view-options",
+					"command": "ignition-flint.show-options",
 					"when": "view == ignitionFileSystem",
-					"group": "navigation@+2",
-					"icon": "$(more)"
+					"group": "navigation@+2"
 				}
 			],
 			"view/item/context": [
