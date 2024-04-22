@@ -8,7 +8,7 @@ import { FolderResource } from '../resources/folderResource';
 import { debounce } from '../utils/debounce';
 import { AbstractContentElement } from '../resources/abstractContentElement';
 import { AbstractResourceContainer } from '../resources/abstractResourceContainer';
-import { ClassElement, ScriptElement } from '../resources/scriptElements';
+import { ClassElement, MethodElement, ScriptElement } from '../resources/scriptElements';
 
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
@@ -580,31 +580,40 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	
 	private findScriptElementByQualifiedPathRecursive(resource: IgnitionFileResource, qualifiedPath: string): ScriptResource | ScriptElement | undefined {
 		if (resource instanceof ScriptResource) {
-			if (resource.getFullyQualifiedPath() === qualifiedPath) {
-				return resource;
+		  if (resource.getFullyQualifiedPath() === qualifiedPath) {
+			return resource;
+		  }
+	  
+		  for (const scriptElement of resource.scriptElements) {
+			if (!(scriptElement instanceof ScriptElement)) {
+			  continue;
 			}
-	
-			for (const scriptElement of resource.scriptElements) {
-				if (!(scriptElement instanceof ScriptElement)) {
-					continue;
-				}
-
-				if (scriptElement instanceof ScriptElement && scriptElement.getFullyQualifiedPath(false) === qualifiedPath) {
-					return scriptElement;
-				}
+			
+			if (scriptElement instanceof ScriptElement && scriptElement.getFullyQualifiedPath(false) === qualifiedPath) {
+			  return scriptElement;
 			}
+	  
+			// Handle the case of method elements
+			if (scriptElement instanceof ClassElement) {
+			  for (const methodElement of scriptElement.children) {
+				if (methodElement instanceof MethodElement && methodElement.getFullyQualifiedPath() === qualifiedPath) {
+				  return methodElement;
+				}
+			  }
+			}
+		  }
 		}
-
+	  
 		const childResources = resource.children?.filter(child => child instanceof IgnitionFileResource) as IgnitionFileResource[];
 		for (const child of childResources ?? []) {
-			const foundElement = this.findScriptElementByQualifiedPathRecursive(child, qualifiedPath);
-			if (foundElement) {
-				return foundElement;
-			}
+		  const foundElement = this.findScriptElementByQualifiedPathRecursive(child, qualifiedPath);
+		  if (foundElement) {
+			return foundElement;
+		  }
 		}
-	
+	  
 		return undefined;
-	}
+	  }
 
 	public getScriptResourceForPath(inputPath: string): ScriptResource | ScriptElement | undefined {
 		for (const project of this.treeRoot) {
@@ -821,7 +830,10 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 	public async navigateToScriptElement(elementPath: string) {
 		if (elementPath) {
-			const scriptElement = this.findScriptElementByQualifiedPath(elementPath);
+			const elementPathParts = elementPath.split('(');
+			const qualifiedPath = elementPathParts[0];
+			
+			const scriptElement = this.findScriptElementByQualifiedPath(qualifiedPath);
 	
 			if (scriptElement instanceof ScriptResource) {
 				// Expand the tree item

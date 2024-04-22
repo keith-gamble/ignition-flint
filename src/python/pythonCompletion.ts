@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IgnitionProjectResource } from '../resources/projectResource';
 import { FileSystemService } from '../services/fileSystemService';
-import { ClassElement, FunctionElement, ScriptElement } from '../resources/scriptElements';
+import { ClassElement, FunctionElement, MethodElement, ScriptElement } from '../resources/scriptElements';
 import { ScriptResource } from '../resources/scriptResource';
 import { IgnitionFileResource } from '../resources/ignitionFileResource';
 import { FolderResource } from '../resources/folderResource';
@@ -106,23 +106,36 @@ function collectSuggestionsFromProjectAndParents(projectResource: IgnitionProjec
 }
 
 function createCompletionItemForResource(resource: IgnitionFileResource): vscode.CompletionItem {
-    const completionItem = new vscode.CompletionItem(resource.label, resource instanceof ScriptResource ? vscode.CompletionItemKind.File : vscode.CompletionItemKind.Folder);
-    completionItem.detail = resource instanceof ScriptResource ? 'Script' : 'Folder';
+	const completionItem = new vscode.CompletionItem(resource.label, resource instanceof ScriptResource ? vscode.CompletionItemKind.File : vscode.CompletionItemKind.Folder);
+	completionItem.detail = resource instanceof ScriptResource ? 'Script' : 'Folder';
 
-    // Set the isInherited property
-    resource.isInherited = resource.parentResource instanceof IgnitionProjectResource && resource.parentResource.inheritedChildren.includes(resource);
+	// Set the isInherited property
+	resource.isInherited = resource.parentResource instanceof IgnitionProjectResource && resource.parentResource.inheritedChildren.includes(resource);
 
-    // Set a higher sortText for folder resources to prioritize them
-    if (resource instanceof FolderResource) {
-        completionItem.sortText = `0_${resource.label}`;
-    }
+	// Set a higher sortText for folder resources to prioritize them
+	if (resource instanceof FolderResource) {
+		completionItem.sortText = `0_${resource.label}`;
+	}
 
-    return completionItem;
+	return completionItem;
 }
 
 function createCompletionItemForScriptElement(element: AbstractContentElement): vscode.CompletionItem {
 	const completionItem = new vscode.CompletionItem(element.label, element instanceof ClassElement ? vscode.CompletionItemKind.Class : element instanceof FunctionElement ? vscode.CompletionItemKind.Function : vscode.CompletionItemKind.Constant);
 	completionItem.detail = element instanceof ClassElement ? 'Class' : element instanceof FunctionElement ? 'Function' : 'Constant';
+
+	if (element instanceof ClassElement) {
+		const initParameters = element.getInitParameters();
+
+		if (initParameters !== undefined) {
+			completionItem.insertText = new vscode.SnippetString(`${element.label}(${initParameters})$0`);
+		} else {
+			completionItem.insertText = new vscode.SnippetString(`${element.label}($0)`);
+		}
+	} else if (element instanceof FunctionElement || element instanceof MethodElement) {
+		completionItem.insertText = new vscode.SnippetString(`${element.definition}$0`);
+	}
+
 	return completionItem;
 }
 

@@ -237,15 +237,15 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		  prompt: 'Enter the full path to the element (e.g., model.interfaces.event_provider.EventProvider)',
 		  placeHolder: 'Element path'
 		});
-
+	  
 		if (!elementPath) {
-			return;
+		  return;
 		}
-
+	  
 		try {
-			ignitionFileSystemProvider.navigateToScriptElement(elementPath);
+		  await ignitionFileSystemProvider.navigateToScriptElement(elementPath);
 		} catch (error: any) {
-			vscode.window.showErrorMessage(`Failed to navigate to element: ${error.message}`);
+		  vscode.window.showErrorMessage(`Failed to navigate to element: ${error.message}`);
 		}
 	  }));
 }

@@ -78,7 +78,7 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
 					classElement.lineNumber = lineNumber;
 					resources.push(classElement);
 					currentClass = classElement;
-					currentFunction = null; // Reset currentFunction when entering a class
+					currentFunction = null;
 				} else if (match = functionPattern.exec(line)) {
 					const functionNameWithParams = match[1].trim();
 					const functionElement = new FunctionElement(functionNameWithParams, this.resourceUri, lineNumber, this);
@@ -94,8 +94,13 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
 					const methodElement = new MethodElement(methodNameWithParams, this.resourceUri, lineNumber, currentClass);
 					methodElement.lineNumber = lineNumber;
 					currentClass.children.push(methodElement);
-					currentFunction = null; // Reset currentFunction when entering a method
-				} 
+
+					if (methodElement.label.startsWith('__init__')) {
+						currentClass.setInitMethod(methodElement);
+					}
+
+					currentFunction = null;
+				}
 			});
 
 			this.scriptElements = resources;
