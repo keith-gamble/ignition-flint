@@ -34,19 +34,23 @@ jobs:
       - name: Compile TypeScript to Extension
         run: npm run compile
 
-      - name: Set Version from Tag or Input
+      - name: Set Version from Tag or Input and Determine Pre-Release Status
         id: set_version
         run: |
           if [[ ${{ github.event_name }} == 'push' ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
           elif [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
             VERSION=${{ github.event.inputs.version }}
-            if [[ "${{ github.event.inputs.pre_release }}" == 'true' ]] && [[ ! "$VERSION" == *"-SNAPSHOT"* ]]; then
-              VERSION="$VERSION-SNAPSHOT"
-            fi
           fi
+          PRE_RELEASE='false'
+          if [[ "${{ github.event.inputs.pre_release }}" == 'true' ]] || [[ "$VERSION" == *"-SNAPSHOT"* ]]; then
+            PRE_RELEASE='true'
+          fi
+          VERSION=${VERSION//-SNAPSHOT/}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PRE_RELEASE=$PRE_RELEASE" >> $GITHUB_ENV
           echo "::set-output name=version::$VERSION"
+          echo "::set-output name=pre_release::$PRE_RELEASE"
         shell: bash
 
       - name: Update version in package.json
@@ -58,13 +62,13 @@ jobs:
         run: npx vsce package
 
       - name: Publish to VS Code Marketplace
-        if: contains(env.VERSION, '-SNAPSHOT') == false
+        if: env.PRE_RELEASE == 'false'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish -p $VSCE_PAT
 
       - name: Publish to VS Code Marketplace (Pre-release)
-        if: contains(env.VERSION, '-SNAPSHOT')
+        if: env.PRE_RELEASE == 'true'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish -p $VSCE_PAT --pre-release
