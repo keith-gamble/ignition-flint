@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
 
 jobs:
   build:
@@ -24,11 +29,16 @@ jobs:
       - name: Compile TypeScript to Extension
         run: npm run compile
 
-      - name: Set Version from Tag
+      - name: Set Version from Tag or Input
         id: set_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Extracted version $VERSION from tag"
+          if [[ ${{ github.event_name }} == 'push' ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Extracted version $VERSION from tag"
+          elif [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            VERSION=${{ github.event.inputs.version }}
+            echo "Using manually provided version $VERSION"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "::set-output name=version::$VERSION"
         shell: bash
