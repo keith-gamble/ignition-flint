@@ -403,6 +403,7 @@
 		"compile": "tsc -p ./"
 	},
 	"dependencies": {
+		"js-yaml": "^4.1.0",
 		"axios": "^1.6.8",
 		"https": "^1.0.0",
 		"vscode-languageclient": "^9.0.1"
