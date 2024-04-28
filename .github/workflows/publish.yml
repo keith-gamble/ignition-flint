@@ -9,6 +9,11 @@ on:
       version:
         description: 'Version to publish (e.g., 1.0.0)'
         required: true
+      pre_release:
+        description: 'Mark this version as a pre-release'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build:
@@ -34,10 +39,11 @@ jobs:
         run: |
           if [[ ${{ github.event_name }} == 'push' ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
-            echo "Extracted version $VERSION from tag"
           elif [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
             VERSION=${{ github.event.inputs.version }}
-            echo "Using manually provided version $VERSION"
+            if [[ "${{ github.event.inputs.pre_release }}" == 'true' ]] && [[ ! "$VERSION" == *"-SNAPSHOT"* ]]; then
+              VERSION="$VERSION-SNAPSHOT"
+            fi
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "::set-output name=version::$VERSION"
