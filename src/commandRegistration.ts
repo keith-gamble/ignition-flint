@@ -289,11 +289,15 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 		}));
 
 		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.identifyGateways', async () => {
-			await dependencyContainer.getIgnitionGatewayProvider().identifyGateways();
-		}));
+			const composePaths = await vscode.window.showOpenDialog({
+				canSelectFiles: true,
+				canSelectMany: true,
+				filters: { 'Docker Compose Files': ['yml', 'yaml'] }
+			});
 
-		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.identifyComposeFiles', async () => {
-			await dependencyContainer.getIgnitionGatewayProvider().identifyComposeFiles();
+			if (composePaths) {
+				await dependencyContainer.getIgnitionGatewayProvider().identifyGateways(composePaths.map(uri => uri.fsPath));
+			}
 		}));
 
 		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.requestProjectScan', async (gateway: IgnitionGateway) => {

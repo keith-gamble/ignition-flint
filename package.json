@@ -34,14 +34,6 @@
 					"default": true,
 					"description": "Whether to verify SSL certificates when making requests to Ignition Gateways."
 				},
-				"ignitionFlint.composePaths": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					},
-					"default": [],
-					"description": "Paths to docker compose files for Ignition Gateways."
-				},
 				"ignitionFlint.ignitionGateways": {
 					"type": "array",
 					"items": {

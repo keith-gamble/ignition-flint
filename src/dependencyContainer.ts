@@ -39,7 +39,9 @@ export class DependencyContainer {
 	}
 
 	private createIgnitionGatewayProvider(): IgnitionGatewayProvider {
-		return new IgnitionGatewayProvider(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this);
+		const ignitionGatewayProvider = new IgnitionGatewayProvider();
+		this.context.subscriptions.push(ignitionGatewayProvider);
+		return ignitionGatewayProvider;
 	}
 
 	getIgnitionGatewayProvider(): IgnitionGatewayProvider {

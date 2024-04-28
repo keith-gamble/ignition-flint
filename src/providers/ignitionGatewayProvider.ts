@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getAxiosInstance } from '../utils/httpUtils';
 import { DependencyContainer } from '../dependencyContainer';
-import { isVersionAtMinimum  } from '../utils/versioning';
+import { isVersionAtMinimum } from '../utils/versioning';
 
 
 interface ComposeData {
@@ -33,11 +33,15 @@ export interface IgnitionGatewayConfigElement {
 export class IgnitionGatewayProvider implements vscode.TreeDataProvider<IgnitionGateway> {
 	private _onDidChangeTreeData: vscode.EventEmitter<IgnitionGateway | undefined> = new vscode.EventEmitter<IgnitionGateway | undefined>();
 	readonly onDidChangeTreeData: vscode.Event<IgnitionGateway | undefined> = this._onDidChangeTreeData.event;
-	private dependencyContainer: DependencyContainer;
+	private disposables: vscode.Disposable[] = [];
 
-	constructor(private workspaceRoot: string, dependencyContainer: DependencyContainer) {
-		this.dependencyContainer = dependencyContainer;
-	 }
+	constructor() {
+		this.watchWorkspaceFileChanges();
+	}
+
+	dispose(): void {
+		this.disposables.forEach(disposable => disposable.dispose());
+	}
 
 	refresh(): void {
 		this._onDidChangeTreeData.fire(undefined);
@@ -48,25 +52,48 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 	}
 
 	async getChildren(): Promise<IgnitionGateway[]> {
-		const composePaths = vscode.workspace.getConfiguration('ignitionFlint').get<string[]>('composePaths');
-		let gatewayConfigs = vscode.workspace.getConfiguration('ignitionFlint').get<IgnitionGatewayConfigElement[]>('ignitionGateways');
-
-		if (!composePaths || composePaths.length === 0) {
-			await this.identifyComposeFiles();
-		}
-
+		const gatewayConfigs = vscode.workspace.getConfiguration('ignitionFlint').get<IgnitionGatewayConfigElement[]>('ignitionGateways');
 
 		if (!gatewayConfigs || gatewayConfigs.length === 0) {
-			await this.identifyGateways();
-			gatewayConfigs = vscode.workspace.getConfiguration('ignitionFlint').get<IgnitionGatewayConfigElement[]>('ignitionGateways');
+			const shouldAutoIdentify = await this.promptForAutoIdentification();
+			if (shouldAutoIdentify) {
+				const composePaths = await this.promptForComposeFiles();
+				if (composePaths && composePaths.length > 0) {
+					await this.identifyGateways(composePaths);
+				}
+			}
 		}
 
-
-		if (!gatewayConfigs || gatewayConfigs.length === 0) {
+		const updatedGatewayConfigs = vscode.workspace.getConfiguration('ignitionFlint').get<IgnitionGatewayConfigElement[]>('ignitionGateways');
+		if (!updatedGatewayConfigs || updatedGatewayConfigs.length === 0) {
 			return [];
 		}
 
-		return gatewayConfigs.map(config => new IgnitionGateway(config));
+		return updatedGatewayConfigs.map(config => new IgnitionGateway(config));
+	}
+
+	private async promptForAutoIdentification(): Promise<boolean> {
+		const result = await vscode.window.showInformationMessage(
+			'No Ignition Gateway configurations found. Do you want to auto-generate gateway configs for the current workspace?',
+			'Select Docker Compose Files',
+			'Ignore'
+		);
+
+		return result === 'Select Docker Compose Files';
+	}
+
+	private async promptForComposeFiles(): Promise<string[] | undefined> {
+		const selectedFiles = await vscode.window.showOpenDialog({
+			canSelectFiles: true,
+			canSelectMany: true,
+			filters: { 'Docker Compose Files': ['yml', 'yaml'] }
+		});
+
+		if (selectedFiles) {
+			return selectedFiles.map(uri => uri.fsPath);
+		}
+
+		return undefined;
 	}
 
 	async supportsProjectScanEndpoint(address: string): Promise<boolean> {
@@ -116,17 +143,17 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 			vscode.window.showInformationMessage('The gateway does not support the project scan endpoint.');
 			return;
 		}
-	
+
 		let url = `${gateway.config.address}/data/project-scan-endpoint/scan`;
-	
+
 		if (gateway.updateDesignerOnSave) {
 			url += '?updateDesigners=true';
-	
+
 			if (gateway.forceUpdateDesigner) {
 				url += '&forceUpdate=true';
 			}
 		}
-	
+
 		try {
 			const response = await getAxiosInstance().then(instance => instance.post(url));
 			vscode.window.showInformationMessage(`Project scan requested for ${gateway.config.label}.`);
@@ -199,18 +226,16 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 		}
 	}
 
-	async identifyGateways(): Promise<void> {
-		const composePaths = vscode.workspace.getConfiguration('ignitionFlint').get<string[]>('composePaths');
-
-		if (!(composePaths && composePaths.length > 0)) {
-			vscode.window.showInformationMessage('No Docker Compose files found in the workspace settings.');
+	async identifyGateways(composePaths: string[]): Promise<void> {
+		if (!composePaths || composePaths.length === 0) {
+			vscode.window.showInformationMessage('No Docker Compose files provided.');
 			return;
 		}
 
 		const gatewayConfigs: IgnitionGatewayConfigElement[] = [];
 
 		for (const composePath of composePaths) {
-			const composeFilePath = path.join(this.workspaceRoot, composePath);
+			const composeFilePath = path.join(composePath);
 			const composeContent = fs.readFileSync(composeFilePath, 'utf-8');
 			const composeData = yaml.load(composeContent) as ComposeData | undefined;
 
@@ -263,7 +288,7 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 
 								}
 							}
-									
+
 
 							gatewayConfigs.push({
 								label,
@@ -299,34 +324,37 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 				this.refresh();
 			}
 		} else {
-			const updateGateways = await vscode.window.showInformationMessage(
-				`${gatewayConfigs.length} Ignition gateway(s) found. Do you want to add them to the workspace settings?`,
-				'Yes',
-				'No'
-			);
-
-			if (updateGateways === 'Yes') {
-				await vscode.workspace.getConfiguration('ignitionFlint').update('ignitionGateways', gatewayConfigs, vscode.ConfigurationTarget.Workspace);
-				vscode.window.showInformationMessage(`${gatewayConfigs.length} Ignition gateway(s) set in the workspace settings.`);
-				this.refresh();
-			}
+			await vscode.workspace.getConfiguration('ignitionFlint').update('ignitionGateways', gatewayConfigs, vscode.ConfigurationTarget.Workspace);
+			vscode.window.showInformationMessage(`${gatewayConfigs.length} Ignition gateway(s) added to the workspace settings.`);
+			this.refresh();
 		}
 	}
 
 	getRelevantGatewaysForProjectPath(projectPath: string): IgnitionGateway[] {
 		const relevantGateways: IgnitionGateway[] = [];
 		const gatewayConfigs = vscode.workspace.getConfiguration('ignitionFlint').get<IgnitionGatewayConfigElement[]>('ignitionGateways');
-	
+
 		if (gatewayConfigs) {
 			for (const config of gatewayConfigs) {
 				// Check if any of the list items in projectPaths match part of the projectPath
-				if (config.projectPaths.some((path) => { return projectPath.includes(path) || path.includes(projectPath)} )) {
+				if (config.projectPaths.some((path) => { return projectPath.includes(path) || path.includes(projectPath) })) {
 					relevantGateways.push(new IgnitionGateway(config));
 				}
 			}
 		}
-	
+
 		return relevantGateways;
+	}
+
+	private watchWorkspaceFileChanges(): void {
+		if (vscode.workspace.workspaceFile) {
+			const workspaceFileWatcher = vscode.workspace.createFileSystemWatcher(vscode.workspace.workspaceFile.fsPath);
+			workspaceFileWatcher.onDidChange(() => {
+				this.refresh();
+			});
+
+			this.disposables.push(workspaceFileWatcher);
+		}
 	}
 }
 
@@ -339,6 +367,7 @@ export class IgnitionGateway extends vscode.TreeItem {
 	constructor(public readonly config: IgnitionGatewayConfigElement) {
 		super(config.label, vscode.TreeItemCollapsibleState.None);
 		this.description = config.address;
+		this.tooltip = "Open Gateway in Browser";
 		this.updateDesignerOnSave = config.updateDesignerOnSave;
 		this.forceUpdateDesigner = config.forceUpdateDesigner;
 		this.supportsProjectScanEndpoint = config.supportsProjectScanEndpoint;
