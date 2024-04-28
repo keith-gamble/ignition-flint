@@ -11,7 +11,6 @@ export async function getAxiosInstance(forceRecreate: boolean = false): Promise<
 
 	if (!axiosInstance) {
 		let sslVerify: boolean = await vscode.workspace.getConfiguration('ignitionFlint').get('sslVerify') as boolean;
-		console.log('sslVerify: ', sslVerify);
 
 		axiosInstance = axios.create({
 			httpsAgent: new https.Agent({

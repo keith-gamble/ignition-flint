@@ -283,7 +283,6 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	}));
 
 	if (vscode.workspace.workspaceFile) {
-		console.log(`Workspace file: ${vscode.workspace.workspaceFile.fsPath}`);
 
 		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.refreshGatewayView', () => {
 			dependencyContainer.getIgnitionGatewayProvider().refresh();
@@ -299,6 +298,16 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.requestProjectScan', async (gateway: IgnitionGateway) => {
 			await dependencyContainer.getIgnitionGatewayProvider().requestProjectScan(gateway);
+		}));
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openGatewayConfigPage', (gateway: IgnitionGateway) => {
+			const configUrl = `${gateway.config.address}/web/config/?`;
+			vscode.env.openExternal(vscode.Uri.parse(configUrl));
+		}));
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openGatewayStatusPage', (gateway: IgnitionGateway) => {
+			const statusUrl = `${gateway.config.address}/web/status/?`;
+			vscode.env.openExternal(vscode.Uri.parse(statusUrl));
 		}));
 	}
 }

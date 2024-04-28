@@ -239,6 +239,16 @@
 				"title": "Request Project Scan",
 				"category": "Ignition Flint",
 				"icon": "$(sync)"
+			},
+			{
+				"command": "ignition-flint.openGatewayConfigPage",
+				"title": "Open Config Page",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.openGatewayStatusPage",
+				"title": "Open Status Page",
+				"category": "Ignition Flint"
 			}
 		],
 		"menus": {
@@ -347,6 +357,16 @@
 					"command": "ignition-flint.requestProjectScan",
 					"when": "view == ignitionGateways && (viewItem == ignitionGateway.supportsProjectScanEndpoint)",
 					"group": "inline"
+				},
+				{
+					"command": "ignition-flint.openGatewayConfigPage",
+					"when": "view == ignitionGateways && (viewItem == ignitionGateway || viewItem == ignitionGateway.supportsProjectScanEndpoint)",
+					"group": "navigation"
+				},
+				{
+					"command": "ignition-flint.openGatewayStatusPage",
+					"when": "view == ignitionGateways && (viewItem == ignitionGateway || viewItem == ignitionGateway.supportsProjectScanEndpoint)",
+					"group": "navigation"
 				}
 			]
 		},

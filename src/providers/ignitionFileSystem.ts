@@ -190,7 +190,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private async getIgnitionProjects(workspaceRoot: string): Promise<{ projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[]> {
 		const projects: { projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
 		const files = await vscode.workspace.findFiles('**/project.json');
-		console.log(files);
 		for (const file of files) {
 			const projectJsonPath = file.fsPath;
 			const projectDir = path.dirname(projectJsonPath);
@@ -756,7 +755,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	}
 
 	async triggerGatewayUpdatesForProjectPath(projectPath: string): Promise<void> {
-		console.log('Triggering gateway updates for project path:', projectPath);
 		const ignitionGatewayProvider = this.dependencyContainer.getIgnitionGatewayProvider();
 		const relevantGateways = ignitionGatewayProvider.getRelevantGatewaysForProjectPath(projectPath);
 	
