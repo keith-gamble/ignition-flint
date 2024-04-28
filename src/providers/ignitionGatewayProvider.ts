@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getAxiosInstance } from '../utils/httpUtils';
 import { DependencyContainer } from '../dependencyContainer';
+import { isVersionAtMinimum  } from '../utils/versioning';
 
 
 interface ComposeData {
@@ -84,21 +85,24 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 			} else {
 				if (error.message.includes('certificate')) {
 					const disableSslVerify = await vscode.window.showInformationMessage(
-						'Unable to verify the SSL certificate. Do you want to disable SSL verification for Flint in this workspace?',
+						`Unable to verify the SSL certificat for ${address}. Do you want to disable SSL verification for Flint in this workspace?`,
 						'Yes',
 						'No'
 					);
 
-					if (disableSslVerify === 'Yes') {
-						await vscode.workspace.getConfiguration('ignitionFlint').update('sslVerify', false, vscode.ConfigurationTarget.Workspace);
-						getAxiosInstance(true); // Force recreate axiosInstance with updated SSL verification setting
-						try {
-							const response = await getAxiosInstance().then(instance => instance.get(url));
-							return response.data.supported;
-						} catch (retryError: any) {
-							console.error('Error checking project scan endpoint support after disabling SSL verification:', retryError.message);
-						}
+					if (disableSslVerify != 'Yes') {
+						throw error;
 					}
+
+					await vscode.workspace.getConfiguration('ignitionFlint').update('sslVerify', false, vscode.ConfigurationTarget.Workspace);
+					getAxiosInstance(true); // Force recreate axiosInstance with updated SSL verification setting
+					try {
+						const response = await getAxiosInstance().then(instance => instance.get(url));
+						return response.data.supported;
+					} catch (retryError: any) {
+						console.error('Error checking project scan endpoint support after disabling SSL verification:', retryError.message);
+					}
+
 				} else {
 					console.error('Error checking project scan endpoint support:', error.message);
 				}
@@ -213,6 +217,8 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 			if (composeData && composeData.services) {
 				for (const [serviceName, serviceConfig] of Object.entries(composeData.services)) {
 					if (serviceConfig.image && serviceConfig.image.includes('ignition')) {
+						const version = serviceConfig.image.split(':')[1];
+
 						const traefikHostname = serviceConfig.labels?.['traefik.hostname'];
 						const containerHostname = serviceConfig.hostname;
 						const containerName = serviceConfig.container_name;
@@ -237,7 +243,27 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 
 							const updateDesignerOnSave = true;
 							const forceUpdateDesigner = false;
-							const supportsProjectScanEndpoint = await this.supportsProjectScanEndpoint(address);
+
+							let supportsProjectScanEndpoint = false;
+							if (isVersionAtMinimum(version, '8.1.28')) {
+								supportsProjectScanEndpoint = await this.supportsProjectScanEndpoint(address);
+
+								if (!supportsProjectScanEndpoint) {
+									// Tell the user their gatweay may support the project scan endpoint, and give them a link to the module download page
+									const downloadModule = await vscode.window.showInformationMessage(
+										`The gateway at ${address} may support the project scan endpoint, but does not currently. Do you want to download the module?`,
+										'Learn More'
+									);
+
+									if (downloadModule === 'Learn More') {
+										vscode.env.openExternal(vscode.Uri.parse('https://github.com/design-group/ignition-project-scan-endpoint'));
+
+										vscode.window.showInformationMessage("After downloading the module, and configuring it to run on the gateway. Refresh the Ignition Gateway explorer list to update your config.");
+									}
+
+								}
+							}
+									
 
 							gatewayConfigs.push({
 								label,
