@@ -14,6 +14,7 @@ import { VirtualFileSystemProvider } from './providers/virtualFileSystem';
 import { openIgnitionCode } from './encodedScriptEditing/documentEditing';
 import { IgnitionProjectResource } from './resources/projectResource';
 import { AbstractContentElement } from './resources/abstractContentElement';
+import { IgnitionGateway } from './providers/ignitionGatewayProvider';
 
 function registerCodeTypeCommands(
 	context: vscode.ExtensionContext,
@@ -73,10 +74,18 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 				scriptDirectory = path.join(fileResource.baseFilePath, scriptName);
 			}
 			try {
+				const currentProject = ignitionFileSystemProvider.getCurrentProjectResource(fileResource.resourceUri);
+
+				if (!currentProject) {
+					vscode.window.showErrorMessage('Failed to find current project');
+					return;
+				}
+
 				await fs.promises.mkdir(scriptDirectory);
 				await fs.promises.writeFile(path.join(scriptDirectory, 'code.py'), '');
 				const resourceFileContents = await buildResourceFileContents(context);
 				await fs.promises.writeFile(path.join(scriptDirectory, 'resource.json'), resourceFileContents);
+				await dependencyContainer.getFileSystemService().ignitionFileSystemProvider.triggerGatewayUpdatesForProjectPath(currentProject.relativePath);
 
 				ignitionFileSystemProvider.refreshTreeView();
 
@@ -101,6 +110,8 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 			} else {
 				packageDirectory = path.join(projectResource.baseFilePath, packageName);
 			}
+
+			await dependencyContainer.getFileSystemService().ignitionFileSystemProvider.triggerGatewayUpdatesForProjectPath(packageDirectory);
 
 			try {
 				await fs.promises.mkdir(packageDirectory);
@@ -133,6 +144,8 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 					}
 				}
 
+				await dependencyContainer.getFileSystemService().ignitionFileSystemProvider.triggerGatewayUpdatesForProjectPath(resource.baseFilePath);
+
 				ignitionFileSystemProvider.refresh();
 			} catch (error: any) {
 				vscode.window.showErrorMessage(`Failed to delete script module: ${error.message}`);
@@ -162,6 +175,9 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 				try {
 					await fs.promises.rename(oldPath, newPath);
+
+					await dependencyContainer.getFileSystemService().ignitionFileSystemProvider.triggerGatewayUpdatesForProjectPath(newPath);
+
 					ignitionFileSystemProvider.refreshTreeView();
 
 					if (resource instanceof ScriptResource) {
@@ -210,55 +226,79 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 				command: 'ignition-flint.toggle-inherited-resource-visibility'
 			}
 		];
-	  
+
 		const selectedOption = await vscode.window.showQuickPick(options, {
-		  placeHolder: 'Select an option:'
+			placeHolder: 'Select an option:'
 		});
-	  
+
 		if (selectedOption) {
-		  vscode.commands.executeCommand(selectedOption.command);
+			vscode.commands.executeCommand(selectedOption.command);
 		}
-	  }));
-	  
-	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.toggle-inherited-resource-visibility', async () => {
+	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.toggle-inherited-resource-visibility', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
 		await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
 		ignitionFileSystemProvider.refreshTreeView();
-	  }));
+	}));
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResource', async (resource: ScriptResource) => {
 		if (resource instanceof ScriptResource) {
-		  // Expand the tree item first
-		  vscode.window.showErrorMessage('This command is not yet implemented');
-		  await ignitionFileSystemProvider.expandScriptResource(resource);
-	  
-		  // Then open the document
-		  const document = await vscode.workspace.openTextDocument(resource.resourceUri);
-		  await vscode.window.showTextDocument(document);
-		}
-	  }));
-	  
-	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResourceInNewTab', async (resource: ScriptResource) => {
-		if (resource instanceof ScriptResource) {
-		  const document = await vscode.workspace.openTextDocument(resource.resourceUri);
-		  await vscode.window.showTextDocument(document, { preview: false });
-		}
-	  }));
+			// Expand the tree item first
+			vscode.window.showErrorMessage('This command is not yet implemented');
+			await ignitionFileSystemProvider.expandScriptResource(resource);
 
-	  subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.navigate-to-element', async () => {
+			// Then open the document
+			const document = await vscode.workspace.openTextDocument(resource.resourceUri);
+			await vscode.window.showTextDocument(document);
+		}
+	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openScriptResourceInNewTab', async (resource: ScriptResource) => {
+		if (resource instanceof ScriptResource) {
+			const document = await vscode.workspace.openTextDocument(resource.resourceUri);
+			await vscode.window.showTextDocument(document, { preview: false });
+		}
+	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.navigate-to-element', async () => {
 		const elementPath = await vscode.window.showInputBox({
-		  prompt: 'Enter the full path to the element (e.g., model.interfaces.event_provider.EventProvider)',
-		  placeHolder: 'Element path'
+			prompt: 'Enter the full path to the element (e.g., model.interfaces.event_provider.EventProvider)',
+			placeHolder: 'Element path'
 		});
-	  
+
 		if (!elementPath) {
-		  return;
+			return;
 		}
-	  
+
 		try {
-		  await ignitionFileSystemProvider.navigateToScriptElement(elementPath);
+			await ignitionFileSystemProvider.navigateToScriptElement(elementPath);
 		} catch (error: any) {
-		  vscode.window.showErrorMessage(`Failed to navigate to element: ${error.message}`);
+			vscode.window.showErrorMessage(`Failed to navigate to element: ${error.message}`);
 		}
-	  }));
+	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.openGatewayUrl', (url: string) => {
+		vscode.env.openExternal(vscode.Uri.parse(url));
+	}));
+
+	if (vscode.workspace.workspaceFile) {
+		console.log(`Workspace file: ${vscode.workspace.workspaceFile.fsPath}`);
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.refreshGatewayView', () => {
+			dependencyContainer.getIgnitionGatewayProvider().refresh();
+		}));
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.identifyGateways', async () => {
+			await dependencyContainer.getIgnitionGatewayProvider().identifyGateways();
+		}));
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.identifyComposeFiles', async () => {
+			await dependencyContainer.getIgnitionGatewayProvider().identifyComposeFiles();
+		}));
+
+		subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.requestProjectScan', async (gateway: IgnitionGateway) => {
+			await dependencyContainer.getIgnitionGatewayProvider().requestProjectScan(gateway);
+		}));
+	}
 }

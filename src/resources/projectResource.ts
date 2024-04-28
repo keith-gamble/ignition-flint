@@ -18,12 +18,14 @@ export class IgnitionProjectResource extends AbstractResourceContainer {
         public title: string,
         public parentProjectId: string,
         public baseFilePath: string,
+		public relativePath: string,
         public collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
         public children: IgnitionFileResource[] = [],
         public projectIndex: number = 1
     ) {
         super(title, vscode.Uri.file(baseFilePath), collapsibleState, undefined);
         this.label = this.getUniqueProjectLabel();
+		this.relativePath = relativePath;
         this.tooltip = `${this.title} - ${this.baseFilePath}`;
         this.iconPath = new vscode.ThemeIcon("project");
         this.description = path.relative(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', this.baseFilePath);

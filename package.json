@@ -4,7 +4,7 @@
 	"displayName": "Flint for Ignition",
 	"description": "An extension to add convenience tools for working with Ignition in VS Code",
 	"icon": "images/assets/flint-icon.png",
-	"version": "0.0.9",
+	"version": "0.0.1-SNAPSHOT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/keith-gamble/ignition-flint"
@@ -16,10 +16,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:markdown",
-		"onLanguage:json",
-		"onCommand:ignition-flint.open-with-kindling",
-		"onFileSystem:flint"
+		"onStartupFinished"
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {
@@ -31,6 +28,67 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Show inherited resources in the Ignition Project Scripts view."
+				},
+				"ignitionFlint.sslVerify": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to verify SSL certificates when making requests to Ignition Gateways."
+				},
+				"ignitionFlint.composePaths": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "Paths to docker compose files for Ignition Gateways."
+				},
+				"ignitionFlint.ignitionGateways": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"label": {
+								"type": "string",
+								"description": "The label for the Ignition Gateway."
+							},
+							"address": {
+								"type": "string",
+								"description": "The address of the Ignition Gateway."
+							},
+							"projectPaths": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								},
+								"description": "Paths to the project folders for the Ignition Gateway."
+							},
+							"updateDesignerOnSave": {
+								"type": "boolean",
+								"default": true,
+								"description": "Whether to update the Designer on file save."
+							},
+							"forceUpdateDesigner": {
+								"type": "boolean",
+								"default": false,
+								"description": "Whether to force update the Designer."
+							},
+							"supportsProjectScanEndpoint": {
+								"type": "boolean",
+								"default": false,
+								"description": "Whether the gateway supports the project scan endpoint."
+							}
+						},
+						"required": [
+							"label",
+							"address",
+							"projectPaths",
+							"updateDesignerOnSave",
+							"forceUpdateDesigner",
+							"supportsProjectScanEndpoint"
+						]
+					},
+					"default": [],
+					"description": "Configuration for Ignition Gateways."
 				}
 			}
 		},
@@ -159,6 +217,28 @@
 				"command": "ignition-flint.navigate-to-element",
 				"title": "Navigate to Script Element",
 				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.refreshGatewayView",
+				"title": "Refresh Ignition Gateways",
+				"category": "Ignition Flint",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "ignition-flint.identifyGateways",
+				"title": "Identify Ignition Gateways",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.identifyComposeFiles",
+				"title": "Identify Docker Compose Files",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.requestProjectScan",
+				"title": "Request Project Scan",
+				"category": "Ignition Flint",
+				"icon": "$(sync)"
 			}
 		],
 		"menus": {
@@ -217,6 +297,11 @@
 					"command": "ignition-flint.show-options",
 					"when": "view == ignitionFileSystem",
 					"group": "navigation@+2"
+				},
+				{
+					"command": "ignition-flint.refreshGatewayView",
+					"when": "view == ignitionGateways",
+					"group": "navigation"
 				}
 			],
 			"view/item/context": [
@@ -254,21 +339,14 @@
 					"group": "navigation"
 				},
 				{
-					"command": "ignition-flint.override-inherited-resource",
-					"when": "view == ignitionFileSystem && viewItem == scriptObject && !viewItem.isOverwritten",
-					"group": "inline",
-					"icon": "$(replace)"
-				},
-				{
-					"command": "ignition-flint.discard-overridden-resource",
-					"when": "view == ignitionFileSystem && viewItem == scriptObject && viewItem.isOverwritten",
-					"group": "inline",
-					"icon": "$(discard)"
-				},
-				{
 					"command": "ignition-flint.navigate-to-element",
 					"when": "view == ignitionFileSystem",
 					"group": "navigation"
+				},
+				{
+					"command": "ignition-flint.requestProjectScan",
+					"when": "view == ignitionGateways && (viewItem == ignitionGateway.supportsProjectScanEndpoint)",
+					"group": "inline"
 				}
 			]
 		},
@@ -277,8 +355,15 @@
 				{
 					"id": "ignitionFileSystem",
 					"name": "Ignition Project Scripts",
-					"icon": "$(refresh)",
+					"icon": "$(file-code)",
 					"contextualTitle": "Ignition Project Scripts"
+				},
+				{
+					"id": "ignitionGateways",
+					"name": "Ignition Gateways",
+					"icon": "$(server)",
+					"contextualTitle": "Ignition Gateways",
+					"when": "usingWorkspaceFile == true"
 				}
 			]
 		},
@@ -286,6 +371,10 @@
 			{
 				"view": "ignitionFileSystem",
 				"contents": "No Ignition project scripts found in the current workspace."
+			},
+			{
+				"view": "ignitionGateways",
+				"contents": "No Ignition gateways configured."
 			}
 		],
 		"viewsContainers": {
@@ -300,6 +389,7 @@
 	},
 	"devDependencies": {
 		"@types/glob": "^8.0.0",
+		"@types/js-yaml": "^4.0.9",
 		"@types/mocha": "^10.0.0",
 		"@types/node": "16.x",
 		"@types/vscode": "^1.54.0",
@@ -313,6 +403,8 @@
 		"compile": "tsc -p ./"
 	},
 	"dependencies": {
+		"axios": "^1.6.8",
+		"https": "^1.0.0",
 		"vscode-languageclient": "^9.0.1"
 	}
 }

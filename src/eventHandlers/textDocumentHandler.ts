@@ -34,6 +34,7 @@ export function registerTextDocumentHandlers(context: vscode.ExtensionContext, s
 			const currentProject = fileSystemService.ignitionFileSystemProvider.getCurrentProjectResource(document.uri);
 			if (currentProject) {
 				await fileSystemService.ignitionFileSystemProvider.updateProjectInheritanceContext(currentProject);
+				await fileSystemService.ignitionFileSystemProvider.triggerGatewayUpdatesForProjectPath(currentProject.relativePath);
 			}
 		}
 		updateEditedCode(document);

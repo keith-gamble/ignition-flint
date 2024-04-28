@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { updateEditedCode } from './encodedScriptEditing/documentEditing';
 import { DependencyContainer } from './dependencyContainer';
 import { SubscriptionManager } from './utils/subscriptionManager';
 import { registerTextEditorSelectionHandler } from './eventHandlers/textEditorSelectionHandler';
@@ -7,12 +6,19 @@ import { registerTextDocumentHandlers } from './eventHandlers/textDocumentHandle
 import { registerPythonScriptCompletionProvider } from './python/pythonCompletion';
 import { registerCommands } from './commandRegistration';
 
+
 export function activate(context: vscode.ExtensionContext) {
 	const outputChannel = vscode.window.createOutputChannel('Ignition Flint');
 	outputChannel.clear();
 
 	context.subscriptions.push(outputChannel);
 	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated`);
+
+	// Set the vscode.workspace.workspaceFile locally 
+	if (vscode.workspace.workspaceFile) {
+		vscode.commands.executeCommand('setContext', 'usingWorkspaceFile', true);
+	}
+
 
 	const dependencyContainer = DependencyContainer.getInstance(context);
 	const subscriptionManager = new SubscriptionManager();
@@ -23,6 +29,10 @@ export function activate(context: vscode.ExtensionContext) {
     registerTextEditorSelectionHandler(context, subscriptionManager);
     registerTextDocumentHandlers(context, subscriptionManager, dependencyContainer);
     registerPythonScriptCompletionProvider(context, fileSystemService);
+  
+	if (vscode.workspace.workspaceFile) {
+		vscode.window.registerTreeDataProvider('ignitionGateways', dependencyContainer.getIgnitionGatewayProvider());
+	}
 
 	context.subscriptions.push(subscriptionManager);
 	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);

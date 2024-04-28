@@ -9,6 +9,8 @@ import { debounce } from '../utils/debounce';
 import { AbstractContentElement } from '../resources/abstractContentElement';
 import { AbstractResourceContainer } from '../resources/abstractResourceContainer';
 import { ClassElement, MethodElement, ScriptElement } from '../resources/scriptElements';
+import { IgnitionGateway, IgnitionGatewayConfigElement } from './ignitionGatewayProvider';
+import { DependencyContainer } from '../dependencyContainer';
 
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
@@ -17,11 +19,13 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	public treeRoot: IgnitionProjectResource[] = [];
 	private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
 	private refreshTreeViewDebounced = debounce(this._refreshTreeView.bind(this), 500); // Debounce refreshTreeView by 500ms
+	private projectPathMap: Map<string, IgnitionProjectResource> = new Map();
+	private dependencyContainer: DependencyContainer;
 
 
-
-	constructor(private workspaceRoot: string | undefined) {
+	constructor(private workspaceRoot: string | undefined, dependencyContainer: DependencyContainer) {
 		this.discoverProjectsAndWatch();
+		this.dependencyContainer = dependencyContainer;
 	}
 
 	refresh(data?: any): void {
@@ -62,6 +66,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					project.title,
 					project.parentProjectId,
 					project.path,
+					project.relativePath,
 					vscode.TreeItemCollapsibleState.Collapsed,
 					[],
 					projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
@@ -185,7 +190,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private async getIgnitionProjects(workspaceRoot: string): Promise<{ projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[]> {
 		const projects: { projectId: string, title: string, parentProjectId: string, path: string, relativePath: string }[] = [];
 		const files = await vscode.workspace.findFiles('**/project.json');
-
+		console.log(files);
 		for (const file of files) {
 			const projectJsonPath = file.fsPath;
 			const projectDir = path.dirname(projectJsonPath);
@@ -194,9 +199,15 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			if (fs.existsSync(scriptPythonPath)) {
 				const relativePath = path.relative(workspaceRoot, projectDir);
 				const projectJson = JSON.parse(await fs.promises.readFile(projectJsonPath, 'utf-8'));
-				if (projectJson.title) {
-					projects.push({ projectId: path.basename(projectDir), title: projectJson.title, parentProjectId: projectJson.parent, path: projectDir, relativePath });
+
+				let title = projectJson.title;
+
+				if (!title) {
+					title = path.basename(projectDir);
 				}
+
+				projects.push({ projectId: path.basename(projectDir), title: title, parentProjectId: projectJson.parent, path: projectDir, relativePath });
+				
 			}
 		}
 
@@ -268,10 +279,12 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				project.title,
 				project.parentProjectId,
 				project.path,
+				project.relativePath,
 				vscode.TreeItemCollapsibleState.Collapsed,
 				[],
 				projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 			);
+			this.projectPathMap.set(project.path, projectResource);
 
 			if (project.parentProjectId) {
 				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
@@ -739,6 +752,16 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			return clonedResource;
 		} else {
 			throw new Error(`Unsupported resource type: ${resource.constructor.name}`);
+		}
+	}
+
+	async triggerGatewayUpdatesForProjectPath(projectPath: string): Promise<void> {
+		console.log('Triggering gateway updates for project path:', projectPath);
+		const ignitionGatewayProvider = this.dependencyContainer.getIgnitionGatewayProvider();
+		const relevantGateways = ignitionGatewayProvider.getRelevantGatewaysForProjectPath(projectPath);
+	
+		for (const gateway of relevantGateways) {
+			await ignitionGatewayProvider.requestProjectScan(gateway);
 		}
 	}
 
