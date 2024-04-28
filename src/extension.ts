@@ -14,32 +14,37 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(outputChannel);
 	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated`);
 
-	// Set the vscode.workspace.workspaceFile locally 
-	if (vscode.workspace.workspaceFile) {
-		vscode.commands.executeCommand('setContext', 'usingWorkspaceFile', true);
+	try {
+		// Set the vscode.workspace.workspaceFile locally 
+		if (vscode.workspace.workspaceFile) {
+			vscode.commands.executeCommand('setContext', 'usingWorkspaceFile', true);
+		}
+
+
+		const dependencyContainer = DependencyContainer.getInstance(context);
+		const subscriptionManager = new SubscriptionManager();
+		const fileSystemService = dependencyContainer.getFileSystemService();
+		subscriptionManager.add(outputChannel);
+
+		registerCommands(context, dependencyContainer, subscriptionManager);
+		registerTextEditorSelectionHandler(context, subscriptionManager);
+		registerTextDocumentHandlers(context, subscriptionManager, dependencyContainer);
+		registerPythonScriptCompletionProvider(context, fileSystemService);
+
+		if (vscode.workspace.workspaceFile) {
+			vscode.window.registerTreeDataProvider('ignitionGateways', dependencyContainer.getIgnitionGatewayProvider());
+		}
+
+		context.subscriptions.push(subscriptionManager);
+		outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);
+	} catch (error) {
+		outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension failed to activate: ${error}`);
+		vscode.window.showErrorMessage(`Ignition Flint failed to activate: ${error}`);
 	}
-
-
-	const dependencyContainer = DependencyContainer.getInstance(context);
-	const subscriptionManager = new SubscriptionManager();
-	const fileSystemService = dependencyContainer.getFileSystemService();
-	subscriptionManager.add(outputChannel);
-
-	registerCommands(context, dependencyContainer, subscriptionManager);
-    registerTextEditorSelectionHandler(context, subscriptionManager);
-    registerTextDocumentHandlers(context, subscriptionManager, dependencyContainer);
-    registerPythonScriptCompletionProvider(context, fileSystemService);
-  
-	if (vscode.workspace.workspaceFile) {
-		vscode.window.registerTreeDataProvider('ignitionGateways', dependencyContainer.getIgnitionGatewayProvider());
-	}
-
-	context.subscriptions.push(subscriptionManager);
-	outputChannel.appendLine(`[${new Date().toISOString()}] - ignition-flint extension activated successfully`);
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
 	// Clean up subscriptions
 	const disposableSubscriptions = context.subscriptions.filter(subscription => subscription instanceof SubscriptionManager);
 	disposableSubscriptions.forEach(subscription => subscription.dispose());
-  }
+}
