@@ -222,11 +222,6 @@
 				"category": "Ignition Flint"
 			},
 			{
-				"command": "ignition-flint.identifyComposeFiles",
-				"title": "Identify Docker Compose Files",
-				"category": "Ignition Flint"
-			},
-			{
 				"command": "ignition-flint.requestProjectScan",
 				"title": "Request Project Scan",
 				"category": "Ignition Flint",
