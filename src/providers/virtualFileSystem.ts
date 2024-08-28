@@ -210,7 +210,7 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
 		this._bufferedEvents.push(...events);
 
 		if (this._fireSoonHandle) {
-			clearTimeout(this._fireSoonHandle);
+			clearTimeout(this._fireSoonHandle as unknown as number);
 		}
 
 		this._fireSoonHandle = setTimeout(() => {
