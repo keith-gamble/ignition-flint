@@ -12,6 +12,7 @@ import { ClassElement, MethodElement, ScriptElement } from '../resources/scriptE
 import { IgnitionGateway, IgnitionGatewayConfigElement } from './ignitionGatewayProvider';
 import { DependencyContainer } from '../dependencyContainer';
 
+
 export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<IgnitionFileResource | AbstractContentElement> {
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
@@ -22,7 +23,6 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 	private projectPathMap: Map<string, IgnitionProjectResource> = new Map();
 	private dependencyContainer: DependencyContainer;
 
-
 	constructor(private workspaceRoot: string | undefined, dependencyContainer: DependencyContainer) {
 		this.discoverProjectsAndWatch();
 		this.dependencyContainer = dependencyContainer;
@@ -32,6 +32,10 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 		const newTreeRoot = this.sortProjects(this.treeRoot);
 		this.treeRoot = newTreeRoot;
 		this._onDidChangeTreeData.fire(undefined);
+	}
+
+	private logError(message: string): void {
+		this.dependencyContainer.getOutputChannel().appendLine(`[${new Date().toISOString()}] ERROR: ${message}`);
 	}
 
 	public async refreshTreeView(): Promise<void> {
@@ -248,31 +252,33 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 	private async discoverProjectsAndWatch(): Promise<void> {
 		if (!this.workspaceRoot) return;
-
+	
 		const projects = await this.getIgnitionProjects(this.workspaceRoot);
 		this._projects = projects;
-
+	
 		const projectStack: typeof projects = [...projects];
 		const createdProjects = new Set<string>();
 		const projectTitleCounts: { [title: string]: number } = {};
-
+	
 		while (projectStack.length > 0) {
 			const project = projectStack.shift()!;
-
+	
 			if (createdProjects.has(project.projectId)) {
 				continue;
 			}
-
+	
 			if (project.parentProjectId && !createdProjects.has(project.parentProjectId)) {
-				// If the parent project is not yet created, push the current project back onto the stack
-				projectStack.unshift(project);
 				const parentProject = projects.find(p => p.projectId === project.parentProjectId);
 				if (parentProject) {
+					projectStack.unshift(project);
 					projectStack.unshift(parentProject);
+					continue;
+				} else {
+					// Log the missing parent project and continue with the current project
+					this.logError(`Parent project '${project.parentProjectId}' not found for project '${project.projectId}'. Continuing without parent.`);
 				}
-				continue;
 			}
-
+	
 			const projectResource = new IgnitionProjectResource(
 				project.projectId,
 				project.title,
@@ -284,14 +290,24 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 				projectTitleCounts[project.title] ? ++projectTitleCounts[project.title] : (projectTitleCounts[project.title] = 1)
 			);
 			this.projectPathMap.set(project.path, projectResource);
-
+	
 			if (project.parentProjectId) {
 				const parentProjectResource = this.treeRoot.find(p => p.projectId === project.parentProjectId);
 				if (parentProjectResource) {
 					projectResource.parentProject = parentProjectResource;
+				} else {
+					// Log the missing parent project resource
+					this.logError(`Parent project resource '${project.parentProjectId}' not found for project '${project.projectId}'. Continuing without parent.`);
 				}
 			}
-
+	
+			projectResource.watchProjectFiles(this);
+	
+			const scriptsPath = path.join(project.path, 'ignition/script-python');
+			const children = await this.processDirectory(scriptsPath, projectResource, false);
+			projectResource.children = children;
+			await this.updateProjectInheritance(projectResource);
+	
 			// Insert the project resource at the correct position based on its parent-child relationship
 			const parentIndex = this.treeRoot.findIndex(p => p.projectId === project.parentProjectId);
 			if (parentIndex !== -1) {
@@ -299,17 +315,10 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			} else {
 				this.treeRoot.push(projectResource);
 			}
-
-			projectResource.watchProjectFiles(this);
-
-			const scriptsPath = path.join(project.path, 'ignition/script-python');
-			const children = await this.processDirectory(scriptsPath, projectResource, false);
-			projectResource.children = children;
-			await this.updateProjectInheritance(projectResource);
-
+	
 			createdProjects.add(project.projectId);
 		}
-
+	
 		await this.updateProjectInheritanceContext();
 		this.treeRoot = this.sortProjects(this.treeRoot);
 		this.refresh();
@@ -692,35 +701,41 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 
 	private async updateProjectInheritance(project: IgnitionProjectResource): Promise<void> {
 		if (project.parentProject) {
-			await this.updateProjectInheritance(project.parentProject);
-
-			// Create a map of the project's own children by their resource URI
-			const ownChildrenMap = new Map<string, IgnitionFileResource>();
-			for (const child of project.children || []) {
-				ownChildrenMap.set(child.resourceUri.fsPath, child);
-			}
-
-			// Merge the inherited children with the project's own children
-			const mergedChildren: IgnitionFileResource[] = [];
-			for (const inheritedChild of project.parentProject.children || []) {
-				const ownChild = ownChildrenMap.get(inheritedChild.resourceUri.fsPath);
-				if (ownChild) {
-					// If the child exists in both the inherited and the project, use the project's version
-					mergedChildren.push(ownChild);
-					ownChildrenMap.delete(inheritedChild.resourceUri.fsPath);
-				} else {
-					// If the child only exists in the inherited, clone it and add it to the merged children
-					const clonedChild = this.cloneResource(inheritedChild, project);
-					mergedChildren.push(clonedChild);
+			try {
+				await this.updateProjectInheritance(project.parentProject);
+	
+				// Create a map of the project's own children by their resource URI
+				const ownChildrenMap = new Map<string, IgnitionFileResource>();
+				for (const child of project.children || []) {
+					ownChildrenMap.set(child.resourceUri.fsPath, child);
 				}
+	
+				// Merge the inherited children with the project's own children
+				const mergedChildren: IgnitionFileResource[] = [];
+				for (const inheritedChild of project.parentProject.children || []) {
+					const ownChild = ownChildrenMap.get(inheritedChild.resourceUri.fsPath);
+					if (ownChild) {
+						// If the child exists in both the inherited and the project, use the project's version
+						mergedChildren.push(ownChild);
+						ownChildrenMap.delete(inheritedChild.resourceUri.fsPath);
+					} else {
+						// If the child only exists in the inherited, clone it and add it to the merged children
+						const clonedChild = this.cloneResource(inheritedChild, project);
+						mergedChildren.push(clonedChild);
+					}
+				}
+	
+				// Add any remaining own children that didn't exist in the inherited
+				for (const ownChild of ownChildrenMap.values()) {
+					mergedChildren.push(ownChild);
+				}
+	
+				project.inheritedChildren = mergedChildren;
+			} catch (error) {
+				// Log the error and continue without inherited children
+				this.logError(`Error updating project inheritance for '${project.projectId}': ${error}. Continuing without inherited children.`);
+				project.inheritedChildren = [];
 			}
-
-			// Add any remaining own children that didn't exist in the inherited
-			for (const ownChild of ownChildrenMap.values()) {
-				mergedChildren.push(ownChild);
-			}
-
-			project.inheritedChildren = mergedChildren;
 		} else {
 			project.inheritedChildren = [];
 		}

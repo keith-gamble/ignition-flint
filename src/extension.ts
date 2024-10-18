@@ -20,8 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.commands.executeCommand('setContext', 'usingWorkspaceFile', true);
 		}
 
-
-		const dependencyContainer = DependencyContainer.getInstance(context);
+		const dependencyContainer = DependencyContainer.getInstance(context, outputChannel);
 		const subscriptionManager = new SubscriptionManager();
 		const fileSystemService = dependencyContainer.getFileSystemService();
 		subscriptionManager.add(outputChannel);

@@ -8,9 +8,13 @@ export class DependencyContainer {
 	private context: vscode.ExtensionContext;
 	private fileSystemService: FileSystemService;
 	private ignitionGatewayProvider: IgnitionGatewayProvider | undefined;
+	private outputChannel: vscode.OutputChannel;
 
-	private constructor(context: vscode.ExtensionContext) {
+
+
+	private constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
 		this.context = context;
+		this.outputChannel = outputChannel;
 		this.fileSystemService = this.createFileSystemService();
 
 		if (vscode.workspace.workspaceFile) {
@@ -18,9 +22,9 @@ export class DependencyContainer {
 		}
 	}
 
-	static getInstance(context: vscode.ExtensionContext): DependencyContainer {
+	static getInstance(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): DependencyContainer {
 		if (!DependencyContainer.instance) {
-			DependencyContainer.instance = new DependencyContainer(context);
+			DependencyContainer.instance = new DependencyContainer(context, outputChannel);
 		}
 		return DependencyContainer.instance;
 	}
@@ -49,5 +53,9 @@ export class DependencyContainer {
 			throw new Error('Ignition Gateway Provider not available');
 		}
 		return this.ignitionGatewayProvider;
+	}
+
+	getOutputChannel(): vscode.OutputChannel {
+		return this.outputChannel;
 	}
 }
