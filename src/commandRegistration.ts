@@ -210,6 +210,7 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.show-options', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
+		const sortProjectScripts = vscode.workspace.getConfiguration('ignitionFlint').get('sortProjectScripts', false);
 		interface CustomQuickPickItem extends vscode.QuickPickItem {
 			command: string;
 		}
@@ -224,6 +225,11 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 				label: showInheritedResources ? 'Hide Inherited Code' : 'Show Inherited Code',
 				description: 'Toggle the visibility of inherited resources',
 				command: 'ignition-flint.toggle-inherited-resource-visibility'
+			},
+			{
+				label: sortProjectScripts ? 'Disable Alphabetical Sorting' : 'Enable Alphabetical Sorting',
+				description: 'Toggle alphabetical sorting of projects and scripts',
+				command: 'ignition-flint.toggle-sort-project-scripts'
 			}
 		];
 
@@ -239,6 +245,12 @@ export function registerCommands(context: vscode.ExtensionContext, dependencyCon
 	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.toggle-inherited-resource-visibility', async () => {
 		const showInheritedResources = vscode.workspace.getConfiguration('ignitionFlint').get('showInheritedResources', false);
 		await vscode.workspace.getConfiguration('ignitionFlint').update('showInheritedResources', !showInheritedResources, vscode.ConfigurationTarget.Workspace);
+		ignitionFileSystemProvider.refreshTreeView();
+	}));
+
+	subscriptionManager.add(vscode.commands.registerCommand('ignition-flint.toggle-sort-project-scripts', async () => {
+		const sortProjectScripts = vscode.workspace.getConfiguration('ignitionFlint').get('sortProjectScripts', false);
+		await vscode.workspace.getConfiguration('ignitionFlint').update('sortProjectScripts', !sortProjectScripts, vscode.ConfigurationTarget.Workspace);
 		ignitionFileSystemProvider.refreshTreeView();
 	}));
 

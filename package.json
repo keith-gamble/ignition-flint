@@ -29,6 +29,11 @@
 					"default": false,
 					"description": "Show inherited resources in the Ignition Project Scripts view."
 				},
+				"ignitionFlint.sortProjectScripts": {
+					"type": "boolean",
+					"default": false,
+					"description": "Sort projects and scripts alphabetically in the Ignition Project Scripts view."
+				},
 				"ignitionFlint.sslVerify": {
 					"type": "boolean",
 					"default": true,
@@ -203,6 +208,11 @@
 			{
 				"command": "ignition-flint.toggle-inherited-resource-visibility",
 				"title": "Toggle Inherited Resource Visibility",
+				"category": "Ignition Flint"
+			},
+			{
+				"command": "ignition-flint.toggle-sort-project-scripts",
+				"title": "Toggle Alphabetical Sorting",
 				"category": "Ignition Flint"
 			},
 			{
