@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAxiosInstance } from '../utils/httpUtils';
+import { getAxiosInstance, readApiToken } from '../utils/httpUtils';
 import { DependencyContainer } from '../dependencyContainer';
 import { isVersionAtMinimum } from '../utils/versioning';
 
@@ -28,8 +28,9 @@ export interface IgnitionGatewayConfigElement {
 	updateDesignerOnSave: boolean;
 	forceUpdateDesigner: boolean;
 	supportsProjectScanEndpoint: boolean;
+	apiTokenFilePath?: string;
+	ignitionVersion?: string;
 }
-
 export class IgnitionGatewayProvider implements vscode.TreeDataProvider<IgnitionGateway> {
 	private _onDidChangeTreeData: vscode.EventEmitter<IgnitionGateway | undefined> = new vscode.EventEmitter<IgnitionGateway | undefined>();
 	readonly onDidChangeTreeData: vscode.Event<IgnitionGateway | undefined> = this._onDidChangeTreeData.event;
@@ -139,6 +140,71 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 	}
 
 	async requestProjectScan(gateway: IgnitionGateway): Promise<void> {
+		const version = gateway.config.ignitionVersion;
+		const is83OrHigher = version && this.isVersion830orHigher(version);
+
+		// For 8.3+, call both the gateway API and module endpoint
+		if (is83OrHigher) {
+			await this.call83ProjectScan(gateway);
+		} else {
+			// For 8.1, only call the module endpoint (legacy behavior without auth)
+			await this.callModuleEndpoint(gateway, false);
+		}
+	}
+
+	private isVersion830orHigher(version: string): boolean {
+		const major = parseInt(version.split('.')[0]);
+		const minor = parseInt(version.split('.')[1]);
+
+		return major > 8 || (major === 8 && minor >= 3);
+	}
+
+	private getAuthHeaders(gateway: IgnitionGateway): any {
+		const headers: any = {};
+
+		if (gateway.config.apiTokenFilePath) {
+			const token = readApiToken(gateway.config.apiTokenFilePath);
+			if (token) {
+				headers['X-Ignition-API-Token'] = token;
+			}
+		}
+
+		return headers;
+	}
+
+	private async call83ProjectScan(gateway: IgnitionGateway): Promise<void> {
+		const instance = await getAxiosInstance();
+		const headers = this.getAuthHeaders(gateway);
+		let success = false;
+
+		// Call the 8.3 gateway API endpoint
+		try {
+			const v1Url = `${gateway.config.address}/data/api/v1/scan/projects`;
+			await instance.post(v1Url, {}, { headers });
+			console.log(`8.3 Gateway API scan called for ${gateway.config.label}`);
+			success = true;
+		} catch (error: any) {
+			console.error('Error calling 8.3 gateway API:', error.response?.status, error.response?.statusText || error.message);
+		}
+
+		// Also call the module endpoint if supported (with auth for 8.3)
+		if (gateway.supportsProjectScanEndpoint) {
+			try {
+				await this.callModuleEndpoint(gateway, true);
+				success = true;
+			} catch (error) {
+				// Error already logged in callModuleEndpoint
+			}
+		}
+
+		if (success) {
+			vscode.window.showInformationMessage(`Project scan requested for ${gateway.config.label}.`);
+		} else {
+			vscode.window.showErrorMessage(`Failed to trigger project scan for ${gateway.config.label}.`);
+		}
+	}
+
+	private async callModuleEndpoint(gateway: IgnitionGateway, useAuth: boolean): Promise<void> {
 		if (!gateway.supportsProjectScanEndpoint) {
 			vscode.window.showInformationMessage('The gateway does not support the project scan endpoint.');
 			return;
@@ -155,14 +221,31 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 		}
 
 		try {
-			const response = await getAxiosInstance().then(instance => instance.post(url));
-			vscode.window.showInformationMessage(`Project scan requested for ${gateway.config.label}.`);
-		} catch (error: any) {
-			if (error.response) {
-				console.error('Error requesting project scan:', error.response.status, error.response.statusText);
+			const instance = await getAxiosInstance();
+
+			if (useAuth) {
+				// 8.3: Call with auth headers
+				const headers = this.getAuthHeaders(gateway);
+				await instance.post(url, {}, { headers });
 			} else {
-				console.error('Error requesting project scan:', error.message);
+				// 8.1: Call without auth headers (legacy behavior)
+				await instance.post(url);
 			}
+
+			console.log(`Module endpoint scan called for ${gateway.config.label}`);
+
+			// Only show message if this is the only endpoint being called (8.1 behavior)
+			if (!useAuth) {
+				vscode.window.showInformationMessage(`Project scan requested for ${gateway.config.label}.`);
+			}
+		} catch (error: any) {
+			console.error('Error calling module endpoint:', error.response?.status, error.response?.statusText || error.message);
+
+			// Only show error if this is the only endpoint being called (8.1 behavior)
+			if (!useAuth) {
+				vscode.window.showErrorMessage(`Failed to request project scan for ${gateway.config.label}.`);
+			}
+			throw error;
 		}
 	}
 
@@ -296,7 +379,8 @@ export class IgnitionGatewayProvider implements vscode.TreeDataProvider<Ignition
 								projectPaths,
 								updateDesignerOnSave,
 								forceUpdateDesigner,
-								supportsProjectScanEndpoint
+								supportsProjectScanEndpoint,
+								ignitionVersion: version
 							});
 						}
 					}

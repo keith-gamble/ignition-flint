@@ -1,6 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 let axiosInstance: AxiosInstance | null = null;
 
@@ -20,4 +22,20 @@ export async function getAxiosInstance(forceRecreate: boolean = false): Promise<
 		});
 	}
 	return axiosInstance;
+}
+
+export function readApiToken(tokenFilePath: string): string | null {
+	try {
+		const absolutePath = path.isAbsolute(tokenFilePath)
+			? tokenFilePath
+			: path.join(vscode.workspace.workspaceFolders?.[0].uri.fsPath || '', tokenFilePath);
+
+		const content = fs.readFileSync(absolutePath, 'utf8');
+		const match = content.match(/ignition_token=(.+)/);
+		return match ? match[1].trim() : null;
+	}
+	catch (error) {
+		console.error(`Error reading API token from file: ${error}`);
+		return null;
+	}
 }
