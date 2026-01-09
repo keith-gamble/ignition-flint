@@ -334,6 +334,12 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			projectMap.set(project.projectId, project);
 		}
 
+		// Sort projects alphabetically by title first if setting is enabled
+		const sortAlphabetically = vscode.workspace.getConfiguration('ignitionFlint').get('sortProjectScripts', false);
+		const projectsToProcess = sortAlphabetically
+			? [...projects].sort((a, b) => a.title.localeCompare(b.title))
+			: projects;
+
 		// Recursively sort the projects based on their parent-child relationship, making sure parents are first
 		const sortProjectsRecursive = (project: IgnitionProjectResource) => {
 			if (project.parentProject) {
@@ -345,7 +351,7 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 			}
 		};
 
-		for (const project of projects) {
+		for (const project of projectsToProcess) {
 			sortProjectsRecursive(project);
 
 			// Add any projects that were not included in the recursive sorting
@@ -402,6 +408,13 @@ export class IgnitionFileSystemProvider implements vscode.TreeDataProvider<Ignit
 					folderResources.push(folderResource);
 				}
 			}
+		}
+
+		// Sort folders and scripts alphabetically by name if setting is enabled
+		const sortAlphabetically = vscode.workspace.getConfiguration('ignitionFlint').get('sortProjectScripts', false);
+		if (sortAlphabetically) {
+			folderResources.sort((a, b) => a.label.localeCompare(b.label));
+			scriptResources.sort((a, b) => a.label.localeCompare(b.label));
 		}
 
 		resources = [...folderResources, ...scriptResources];

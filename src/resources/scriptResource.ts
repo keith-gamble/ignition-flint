@@ -103,6 +103,19 @@ export class ScriptResource extends IgnitionFileResource implements TreeViewItem
 				}
 			});
 
+			// Sort script elements alphabetically if setting is enabled
+			const sortAlphabetically = vscode.workspace.getConfiguration('ignitionFlint').get('sortProjectScripts', false);
+			if (sortAlphabetically) {
+				resources.sort((a, b) => a.label.localeCompare(b.label));
+
+				// Also sort methods within classes
+				resources.forEach(element => {
+					if (element instanceof ClassElement && element.children) {
+						element.children.sort((a, b) => a.label.localeCompare(b.label));
+					}
+				});
+			}
+
 			this.scriptElements = resources;
 			this.children = resources;
 		} catch (error) {
