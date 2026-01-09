@@ -68,6 +68,14 @@
 								"type": "boolean",
 								"default": false,
 								"description": "Whether the gateway supports the project scan endpoint."
+							},
+							"apiTokenFilePath": {
+								"type": "string",
+								"description": "Path to a file containing an API token for authenticating with the Ignition Gateway."
+							},
+							"ignitionVersion": {
+								"type": "string",
+								"description": "The version of the Ignition Gateway (e.g., '8.0.16', '8.1.5', '8.3.0')."
 							}
 						},
 						"required": [
