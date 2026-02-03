@@ -1,426 +1,1053 @@
 {
-	"publisher": "keith-gamble",
-	"name": "ignition-flint",
-	"displayName": "Flint for Ignition",
-	"description": "An extension to add convenience tools for working with Ignition in VS Code",
-	"icon": "images/assets/flint-icon.png",
-	"version": "0.0.1-SNAPSHOT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/keith-gamble/ignition-flint"
-	},
-	"engines": {
-		"vscode": "^1.63.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onStartupFinished"
-	],
-	"main": "./out/src/extension.js",
-	"contributes": {
-		"configuration": {
-			"type": "object",
-			"title": "Ignition Flint",
-			"properties": {
-				"ignitionFlint.showInheritedResources": {
-					"type": "boolean",
-					"default": false,
-					"description": "Show inherited resources in the Ignition Project Scripts view."
-				},
-				"ignitionFlint.sslVerify": {
-					"type": "boolean",
-					"default": true,
-					"description": "Whether to verify SSL certificates when making requests to Ignition Gateways."
-				},
-				"ignitionFlint.ignitionGateways": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"label": {
-								"type": "string",
-								"description": "The label for the Ignition Gateway."
-							},
-							"address": {
-								"type": "string",
-								"description": "The address of the Ignition Gateway."
-							},
-							"projectPaths": {
-								"type": "array",
-								"items": {
-									"type": "string"
-								},
-								"description": "Paths to the project folders for the Ignition Gateway."
-							},
-							"updateDesignerOnSave": {
-								"type": "boolean",
-								"default": true,
-								"description": "Whether to update the Designer on file save."
-							},
-							"forceUpdateDesigner": {
-								"type": "boolean",
-								"default": false,
-								"description": "Whether to force update the Designer."
-							},
-							"supportsProjectScanEndpoint": {
-								"type": "boolean",
-								"default": false,
-								"description": "Whether the gateway supports the project scan endpoint."
-							},
-							"apiTokenFilePath": {
-								"type": "string",
-								"description": "Path to a file containing an API token for authenticating with the Ignition Gateway."
-							},
-							"ignitionVersion": {
-								"type": "string",
-								"description": "The version of the Ignition Gateway (e.g., '8.0.16', '8.1.5', '8.3.0')."
-							}
-						},
-						"required": [
-							"label",
-							"address",
-							"projectPaths",
-							"updateDesignerOnSave",
-							"forceUpdateDesigner",
-							"supportsProjectScanEndpoint"
-						]
-					},
-					"default": [],
-					"description": "Configuration for Ignition Gateways."
-				}
-			}
-		},
-		"clipboardWrite": true,
-		"filesystem": [
-			{
-				"scheme": "flint",
-				"authority": "file-filesystem-provider",
-				"isCaseSensitive": true,
-				"watcher": {
-					"globPattern": "**/*"
-				}
-			}
-		],
-		"commands": [
-			{
-				"command": "ignition-flint.edit-script-transform",
-				"title": "Edit Script Transform",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.edit-script-action",
-				"title": "Edit Script Action",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.edit-custom-method",
-				"title": "Edit Custom Method",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.edit-message-handler",
-				"title": "Edit Message Handler",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.edit-tag-event-script",
-				"title": "Edit Tag Event Script",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.edit-property-change-script",
-				"title": "Edit Property Change Script",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.open-with-kindling",
-				"category": "Ignition Flint",
-				"title": "Open with Kindling"
-			},
-			{
-				"command": "ignition-flint.paste-as-json",
-				"category": "Ignition Flint",
-				"title": "Paste as JSON"
-			},
-			{
-				"command": "ignition-flint.copy-script-object-path-to-clipboard",
-				"title": "Copy path",
-				"category": "Ignition Flint",
-				"icon": "$(clippy)"
-			},
-			{
-				"command": "ignition-flint.refresh-tree-view",
-				"title": "Refresh Ignition Projects",
-				"category": "Ignition Flint",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "ignition-flint.add-script-module",
-				"title": "Add Script Module",
-				"category": "Ignition Flint",
-				"icon": "$(new-file)"
-			},
-			{
-				"command": "ignition-flint.add-script-package",
-				"title": "Add Script Package",
-				"category": "Ignition Flint",
-				"icon": "$(new-folder)"
-			},
-			{
-				"command": "ignition-flint.delete-script-module",
-				"title": "Delete Resource",
-				"category": "Ignition Flint",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "ignition-flint.rename-resource",
-				"title": "Rename Resource",
-				"category": "Ignition Flint",
-				"icon": "$(pencil)"
-			},
-			{
-				"command": "ignition-flint.openScriptResource",
-				"title": "Open Resource",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.openScriptResourceInNewTab",
-				"title": "Open Resource in New Tab",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.override-inherited-resource",
-				"title": "Override Inherited Resource",
-				"category": "Ignition Flint",
-				"icon": "$(replace)"
-			},
-			{
-				"command": "ignition-flint.discard-overridden-resource",
-				"title": "Discard Overridden Resource",
-				"category": "Ignition Flint",
-				"icon": "$(discard)"
-			},
-			{
-				"command": "ignition-flint.show-options",
-				"title": "Show Options",
-				"icon": "$(more)",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.toggle-inherited-resource-visibility",
-				"title": "Toggle Inherited Resource Visibility",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.navigate-to-element",
-				"title": "Navigate to Script Element",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.refreshGatewayView",
-				"title": "Refresh Ignition Gateways",
-				"category": "Ignition Flint",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "ignition-flint.identifyGateways",
-				"title": "Identify Ignition Gateways",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.requestProjectScan",
-				"title": "Request Project Scan",
-				"category": "Ignition Flint",
-				"icon": "$(sync)"
-			},
-			{
-				"command": "ignition-flint.openGatewayConfigPage",
-				"title": "Open Config Page",
-				"category": "Ignition Flint"
-			},
-			{
-				"command": "ignition-flint.openGatewayStatusPage",
-				"title": "Open Status Page",
-				"category": "Ignition Flint"
-			}
-		],
-		"menus": {
-			"editor/context": [
-				{
-					"command": "ignition-flint.edit-script-transform",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsScriptTransform"
-				},
-				{
-					"command": "ignition-flint.edit-script-action",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsScriptAction"
-				},
-				{
-					"command": "ignition-flint.edit-custom-method",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsCustomMethod"
-				},
-				{
-					"command": "ignition-flint.edit-message-handler",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsMessageHandler"
-				},
-				{
-					"command": "ignition-flint.edit-tag-event-script",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsTagEventScript"
-				},
-				{
-					"command": "ignition-flint.edit-property-change-script",
-					"group": "navigation",
-					"when": "ignition-flint:lineIsPropertyChangeScript"
-				},
-				{
-					"command": "ignition-flint.paste-as-json",
-					"group": "clipboard",
-					"when": "editorTextFocus && !editorReadonly"
-				}
-			],
-			"explorer/context": [
-				{
-					"when": "resourceExtname == .gwbk",
-					"command": "ignition-flint.open-with-kindling",
-					"group": "navigation"
-				}
-			],
-			"view/title": [
-				{
-					"command": "ignition-flint.refresh-tree-view",
-					"when": "view == ignitionFileSystem",
-					"group": "navigation@+1",
-					"icon": "$(refresh)"
-				},
-				{
-					"command": "ignition-flint.show-options",
-					"when": "view == ignitionFileSystem",
-					"group": "navigation@+2"
-				},
-				{
-					"command": "ignition-flint.refreshGatewayView",
-					"when": "view == ignitionGateways",
-					"group": "navigation"
-				}
-			],
-			"view/item/context": [
-				{
-					"when": "view == ignitionFileSystem && (viewItem == scriptElementObject || viewItem == scriptObject)",
-					"command": "ignition-flint.copy-script-object-path-to-clipboard",
-					"group": "inline",
-					"icon": "$(clippy)"
-				},
-				{
-					"command": "ignition-flint.add-script-module",
-					"when": "view == ignitionFileSystem && (viewItem == projectObject || viewItem == folderObject)",
-					"group": "inline",
-					"icon": "$(new-file)"
-				},
-				{
-					"command": "ignition-flint.add-script-package",
-					"when": "view == ignitionFileSystem && (viewItem == projectObject || viewItem == folderObject)",
-					"group": "inline",
-					"icon": "$(new-folder)"
-				},
-				{
-					"command": "ignition-flint.delete-script-module",
-					"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
-					"icon": "$(trash)"
-				},
-				{
-					"command": "ignition-flint.rename-resource",
-					"when": "view == ignitionFileSystem && (viewItem == scriptObject || viewItem == folderObject)",
-					"icon": "$(pencil)"
-				},
-				{
-					"command": "ignition-flint.openScriptResourceInNewTab",
-					"when": "view == ignitionFileSystem && viewItem == scriptObject",
-					"group": "navigation"
-				},
-				{
-					"command": "ignition-flint.navigate-to-element",
-					"when": "view == ignitionFileSystem",
-					"group": "navigation"
-				},
-				{
-					"command": "ignition-flint.requestProjectScan",
-					"when": "view == ignitionGateways && (viewItem == ignitionGateway.supportsProjectScanEndpoint)",
-					"group": "inline"
-				},
-				{
-					"command": "ignition-flint.openGatewayConfigPage",
-					"when": "view == ignitionGateways && (viewItem == ignitionGateway || viewItem == ignitionGateway.supportsProjectScanEndpoint)",
-					"group": "navigation"
-				},
-				{
-					"command": "ignition-flint.openGatewayStatusPage",
-					"when": "view == ignitionGateways && (viewItem == ignitionGateway || viewItem == ignitionGateway.supportsProjectScanEndpoint)",
-					"group": "navigation"
-				}
-			]
-		},
-		"views": {
-			"explorer": [
-				{
-					"id": "ignitionFileSystem",
-					"name": "Ignition Project Scripts",
-					"icon": "$(file-code)",
-					"contextualTitle": "Ignition Project Scripts"
-				},
-				{
-					"id": "ignitionGateways",
-					"name": "Ignition Gateways",
-					"icon": "$(server)",
-					"contextualTitle": "Ignition Gateways",
-					"when": "usingWorkspaceFile == true"
-				}
-			]
-		},
-		"viewsWelcome": [
-			{
-				"view": "ignitionFileSystem",
-				"contents": "No Ignition project scripts found in the current workspace."
-			},
-			{
-				"view": "ignitionGateways",
-				"contents": "No Ignition gateways configured."
-			}
-		],
-		"viewsContainers": {
-			"activitybar": [
-				{
-					"id": "ignition-flint-explorer",
-					"title": "Ignition Flint",
-					"icon": "images/assets/flint-icon.png"
-				}
-			]
-		}
-	},
-	"devDependencies": {
-		"@types/glob": "^8.0.0",
-		"@types/js-yaml": "^4.0.9",
-		"@types/node": "^22.5.1",
-		"@types/mocha": "^10.0.0",
-		"@types/vscode": "^1.63.0",
-		"@vscode/test-electron": "^2.2.0",
-		"eslint": "^8.26.0",
-		"glob": "^8.0.3",
-		"mocha": "^10.1.0",
-		"typescript": "^4.8.4"
-	},
-	"scripts": {
-		"compile": "tsc -p ./"
-	},
-	"dependencies": {
-		"axios": "^1.6.8",
-		"https": "^1.0.0",
-		"js-yaml": "^4.1.0",
-		"vscode-languageclient": "^9.0.1"
-	}
+  "publisher": "bw-design-group",
+  "name": "ignition-flint",
+  "displayName": "Flint for Ignition",
+  "description": "An extension to add convenience tools for working with Ignition in VS Code",
+  "icon": "images/assets/flint-icon.png",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bw-design-group/flint-vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "main": "./out/src/extension.js",
+  "activationEvents": [
+    "onView:flintProjectBrowser",
+    "onLanguage:json",
+    "onFileSystem:flint-script",
+    "onFileSystem:flint-conflict",
+    "onDebug:flint",
+    "onDebugResolve:flint"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "flint",
+          "title": "Flint for Ignition",
+          "icon": "images/assets/flint-icon-mono.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "flintPanel",
+          "title": "Flint",
+          "icon": "$(terminal)"
+        }
+      ]
+    },
+    "views": {
+      "flint": [
+        {
+          "id": "flintProjectBrowser",
+          "name": "Project Browser",
+          "icon": "$(folder-library)",
+          "contextualTitle": "Flint Project Browser",
+          "visibility": "visible"
+        }
+      ],
+      "flintPanel": [
+        {
+          "id": "flint.scriptConsolePanel",
+          "name": "Script Console",
+          "type": "webview",
+          "icon": "$(terminal)",
+          "contextualTitle": "Ignition Script Console"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "flintProjectBrowser",
+        "contents": "Welcome to Flint for Ignition!\n\nOpen a folder containing your Ignition projects to get started.\n\n[Open Folder](command:vscode.openFolder)\n\nTo learn more about Flint, check out the [documentation](https://github.com/bw-design-group/flint-vscode-extension).",
+        "when": "workspaceFolderCount == 0"
+      },
+      {
+        "view": "flintProjectBrowser",
+        "contents": "Welcome to Flint for Ignition!\n\nFlint helps you browse and manage Ignition projects directly from VS Code.\n\n[Get Started](command:flint.getStarted)\n\nTo learn more about Flint, check out the [documentation](https://github.com/bw-design-group/flint-vscode-extension).",
+        "when": "workspaceFolderCount > 0 && !flint:hasConfig"
+      }
+    ],
+    "commands": [
+      {
+        "command": "flint.refreshProjects",
+        "title": "Refresh Projects",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "flint.selectGateway",
+        "title": "Select Gateway",
+        "icon": "$(server)"
+      },
+      {
+        "command": "flint.selectProject",
+        "title": "Select Project",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "flint.openResource",
+        "title": "Open Resource"
+      },
+      {
+        "command": "flint.createResource",
+        "title": "Create Resource",
+        "icon": "$(add)"
+      },
+      {
+        "command": "flint.createFolder",
+        "title": "Create Folder",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "flint.deleteResource",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "flint.duplicateResource",
+        "title": "Duplicate",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "flint.copyResourcePath",
+        "title": "Copy Path",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "flint.renameResource",
+        "title": "Rename",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "flint.searchResources",
+        "title": "Search Resources",
+        "category": "Flint",
+        "icon": "$(search)"
+      },
+      {
+        "command": "flint.findInResources",
+        "title": "Find in Resources",
+        "category": "Flint",
+        "icon": "$(search-view)"
+      },
+      {
+        "command": "flint.searchResourcesByType",
+        "title": "Search in Resource Type"
+      },
+      {
+        "command": "flint.clearSearchHistory",
+        "title": "Clear Search History",
+        "category": "Flint",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "flint.createResourceJson",
+        "title": "Create resource.json",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.createAllMissingResourceJson",
+        "title": "Create All Missing resource.json Files",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.validateResourceJson",
+        "title": "Validate resource.json Files",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.openConfig",
+        "title": "Open Configuration",
+        "category": "Flint",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "flint.getStarted",
+        "title": "Get Started with Flint",
+        "category": "Flint",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "flint.handleInvalidConfig",
+        "title": "Fix Configuration",
+        "category": "Flint",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "flint.addGateway",
+        "title": "Add Gateway",
+        "category": "Flint",
+        "icon": "$(server-environment)"
+      },
+      {
+        "command": "flint.removeGateway",
+        "title": "Remove Gateway",
+        "category": "Flint",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "flint.addProjectPaths",
+        "title": "Add Project Paths",
+        "category": "Flint",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "flint.navigateToGateway",
+        "title": "Open Gateway Webpage",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.navigateToDesigner",
+        "title": "Open Designer",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.navigateToGatewayFromNode",
+        "title": "Open Gateway Webpage",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.navigateToDesignerFromNode",
+        "title": "Open Designer",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.resetDesignerLauncherSetting",
+        "title": "Reset Designer Launcher Setting",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.openWithKindling",
+        "title": "Open with Kindling",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.resetKindlingSetting",
+        "title": "Reset Kindling Installation Setting",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.configureKindlingPath",
+        "title": "Configure Kindling Executable Path",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.editGateway",
+        "title": "Edit Gateway",
+        "category": "Flint",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "flint.validateProject",
+        "title": "Validate Project",
+        "category": "Flint",
+        "icon": "$(check)"
+      },
+      {
+        "command": "flint.scanProjects",
+        "title": "Scan Projects",
+        "category": "Flint",
+        "icon": "$(search)"
+      },
+      {
+        "command": "flint.openResourceInEditor",
+        "title": "Open in Editor",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.fixResourceJson",
+        "title": "Fix resource.json",
+        "category": "Flint",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "flint.searchByType",
+        "title": "Search by Type",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.searchInProject",
+        "title": "Search in Project",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.advancedSearch",
+        "title": "Advanced Search",
+        "category": "Flint",
+        "icon": "$(search-view)"
+      },
+      {
+        "command": "flint.resetToolSettings",
+        "title": "Reset Tool Settings",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.configureExternalTools",
+        "title": "Configure External Tools",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.refreshTree",
+        "title": "Refresh Tree",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.collapseAll",
+        "title": "Collapse All",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.expandAll",
+        "title": "Expand All",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.filterTree",
+        "title": "Filter Tree",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.sortTree",
+        "title": "Sort Tree",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.exportConfiguration",
+        "title": "Export Configuration",
+        "category": "Flint",
+        "icon": "$(export)"
+      },
+      {
+        "command": "flint.importConfiguration",
+        "title": "Import Configuration",
+        "category": "Flint",
+        "icon": "$(import)"
+      },
+      {
+        "command": "flint.exportProjectStructure",
+        "title": "Export Project Structure",
+        "category": "Flint",
+        "icon": "$(export)"
+      },
+      {
+        "command": "flint.openProjectJson",
+        "title": "Open project.json",
+        "category": "Flint",
+        "icon": "$(json)"
+      },
+      {
+        "command": "flint.selectEnvironment",
+        "title": "Select Environment",
+        "category": "Flint",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "flint.debugConfig",
+        "title": "Debug Configuration",
+        "category": "Flint",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "flint.navigateToScriptElement",
+        "title": "Navigate to Script Element",
+        "category": "Flint",
+        "icon": "$(symbol-method)"
+      },
+      {
+        "command": "flint.copyQualifiedPath",
+        "title": "Copy Qualified Path",
+        "category": "Flint",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "flint.copySymbolPath",
+        "title": "Copy Symbol Path",
+        "category": "Flint",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "flint.clearIgnitionStubsCache",
+        "title": "Clear Ignition Stubs Cache",
+        "category": "Flint",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "flint.downloadIgnitionStubs",
+        "title": "Download Ignition Stubs",
+        "category": "Flint",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "flint.compareDecodedWithGit",
+        "title": "Compare Decoded with Git",
+        "category": "Flint",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "flint.editEmbeddedScript",
+        "title": "Edit Script",
+        "category": "Flint",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "flint.compareConflictScripts",
+        "title": "Compare Decoded Scripts",
+        "category": "Flint",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "flint.acceptCurrentScript",
+        "title": "Accept Current (Left Side)",
+        "category": "Flint",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "flint.acceptIncomingScript",
+        "title": "Accept Incoming (Right Side)",
+        "category": "Flint",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "flint.pasteAsJson",
+        "title": "Paste as JSON",
+        "category": "Flint"
+      },
+      {
+        "command": "flint.sendMessageToDesigner",
+        "title": "Send Message to Designer",
+        "category": "Flint",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "flint.connectToDesigner",
+        "title": "Connect to Designer",
+        "category": "Flint",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "flint.disconnectFromDesigner",
+        "title": "Disconnect from Designer",
+        "category": "Flint",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "flint.openScriptConsole",
+        "title": "Open Ignition Script Console",
+        "category": "Flint",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "flint.runInFlint",
+        "title": "Run in Flint",
+        "category": "Flint",
+        "icon": "$(play)"
+      },
+      {
+        "command": "flint.debugScript",
+        "title": "Debug Ignition Script",
+        "category": "Flint",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "flint.openInDesigner",
+        "title": "Open in Designer",
+        "category": "Flint",
+        "icon": "$(link-external)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "flint.acceptCurrentScript",
+          "when": "resourceScheme == flint-conflict",
+          "group": "navigation@1"
+        },
+        {
+          "command": "flint.acceptIncomingScript",
+          "when": "resourceScheme == flint-conflict",
+          "group": "navigation@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "flint.refreshProjects",
+          "when": "view == flintProjectBrowser",
+          "group": "navigation@1"
+        },
+        {
+          "command": "flint.searchResources",
+          "when": "view == flintProjectBrowser",
+          "group": "navigation@2"
+        },
+        {
+          "command": "flint.openConfig",
+          "when": "view == flintProjectBrowser",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "flint.addGateway",
+          "when": "view == flintProjectBrowser && viewItem == gatewaySelector.empty",
+          "group": "inline"
+        },
+        {
+          "command": "flint.addGateway",
+          "when": "view == flintProjectBrowser && viewItem == projectSelector.noGateways",
+          "group": "inline"
+        },
+        {
+          "command": "flint.selectGateway",
+          "when": "view == flintProjectBrowser && viewItem == gatewaySelector",
+          "group": "inline"
+        },
+        {
+          "command": "flint.selectProject",
+          "when": "view == flintProjectBrowser && viewItem == projectSelector",
+          "group": "inline"
+        },
+        {
+          "command": "flint.handleInvalidConfig",
+          "when": "view == flintProjectBrowser && viewItem == invalidConfig",
+          "group": "inline"
+        },
+        {
+          "command": "flint.openConfig",
+          "when": "view == flintProjectBrowser && viewItem == invalidConfig",
+          "group": "1_config@1"
+        },
+        {
+          "command": "flint.navigateToGatewayFromNode",
+          "when": "view == flintProjectBrowser && viewItem == gatewaySelector",
+          "group": "1_new@1"
+        },
+        {
+          "command": "flint.navigateToDesignerFromNode",
+          "when": "view == flintProjectBrowser && viewItem == gatewaySelector",
+          "group": "1_new@2"
+        },
+        {
+          "command": "flint.selectEnvironment",
+          "when": "view == flintProjectBrowser && viewItem == gatewaySelector",
+          "group": "1_new@3"
+        },
+        {
+          "command": "flint.createResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceType",
+          "group": "1_new@1"
+        },
+        {
+          "command": "flint.createFolder",
+          "when": "view == flintProjectBrowser && viewItem == resourceType",
+          "group": "1_new@2"
+        },
+        {
+          "command": "flint.searchResourcesByType",
+          "when": "view == flintProjectBrowser && viewItem == resourceType",
+          "group": "2_search@1"
+        },
+        {
+          "command": "flint.openInDesigner",
+          "when": "view == flintProjectBrowser && viewItem == resource",
+          "group": "navigation@1"
+        },
+        {
+          "command": "flint.openInDesigner",
+          "when": "view == flintProjectBrowser && viewItem == pythonScript",
+          "group": "navigation@1"
+        },
+        {
+          "command": "flint.duplicateResource",
+          "when": "view == flintProjectBrowser && viewItem == resource",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "flint.copyResourcePath",
+          "when": "view == flintProjectBrowser && viewItem == resource || viewItem == resourceFolder",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "flint.renameResource",
+          "when": "view == flintProjectBrowser && viewItem == resource",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "flint.deleteResource",
+          "when": "view == flintProjectBrowser && viewItem == resource",
+          "group": "2_danger@1"
+        },
+        {
+          "command": "flint.deleteResource",
+          "when": "view == flintProjectBrowser && viewItem == singletonResource",
+          "group": "1_singleton@1"
+        },
+        {
+          "command": "flint.createResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceCategory",
+          "group": "1_new@1"
+        },
+        {
+          "command": "flint.createFolder",
+          "when": "view == flintProjectBrowser && viewItem == resourceCategory",
+          "group": "1_new@2"
+        },
+        {
+          "command": "flint.createResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceFolder",
+          "group": "1_new@1"
+        },
+        {
+          "command": "flint.createFolder",
+          "when": "view == flintProjectBrowser && viewItem == resourceFolder",
+          "group": "1_new@2"
+        },
+        {
+          "command": "flint.duplicateResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceFolder",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "flint.renameResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceFolder",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "flint.deleteResource",
+          "when": "view == flintProjectBrowser && viewItem == resourceFolder",
+          "group": "2_danger@1"
+        },
+        {
+          "command": "flint.createResourceJson",
+          "when": "view == flintProjectBrowser && viewItem =~ /.*\\.missingResourceJson/",
+          "group": "flint@1"
+        },
+        {
+          "command": "flint.createAllMissingResourceJson",
+          "when": "view == flintProjectBrowser && viewItem == resourceType",
+          "group": "flint@8"
+        },
+        {
+          "command": "flint.createAllMissingResourceJson",
+          "when": "view == flintProjectBrowser && viewItem == resourceCategory",
+          "group": "flint@8"
+        },
+        {
+          "command": "flint.validateResourceJson",
+          "when": "view == flintProjectBrowser && viewItem == projectSelector",
+          "group": "flint@9"
+        },
+        {
+          "command": "flint.openProjectJson",
+          "when": "view == flintProjectBrowser && viewItem == projectSelector",
+          "group": "flint@10"
+        },
+        {
+          "command": "flint.copySymbolPath",
+          "when": "view == flintProjectBrowser && viewItem =~ /pythonSymbol/",
+          "group": "inline"
+        },
+        {
+          "command": "flint.copySymbolPath",
+          "when": "view == flintProjectBrowser && viewItem =~ /pythonSymbol/",
+          "group": "1_modification@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .gwbk || resourceExtname == .modl || resourceExtname == .idb || resourceExtname == .log",
+          "command": "flint.openWithKindling",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "editorLangId == python && resourcePath =~ /script-python/",
+          "command": "flint.copyQualifiedPath",
+          "group": "9_cutcopypaste@4"
+        },
+        {
+          "command": "flint.pasteAsJson",
+          "group": "9_cutcopypaste@5"
+        },
+        {
+          "when": "resourceExtname == .json",
+          "command": "flint.editEmbeddedScript",
+          "group": "flint@1"
+        },
+        {
+          "when": "editorLangId == python",
+          "command": "flint.runInFlint",
+          "group": "flint@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "flint.openResource",
+          "when": "false"
+        },
+        {
+          "command": "flint.createResource",
+          "when": "flint:hasActiveProject"
+        },
+        {
+          "command": "flint.createFolder",
+          "when": "flint:hasActiveProject"
+        },
+        {
+          "command": "flint.deleteResource",
+          "when": "false"
+        },
+        {
+          "command": "flint.duplicateResource",
+          "when": "false"
+        },
+        {
+          "command": "flint.copyResourcePath",
+          "when": "false"
+        },
+        {
+          "command": "flint.renameResource",
+          "when": "false"
+        },
+        {
+          "command": "flint.searchResources",
+          "when": "flint.projectBrowserVisible"
+        },
+        {
+          "command": "flint.findInResources",
+          "when": "flint.projectBrowserVisible"
+        },
+        {
+          "command": "flint.clearSearchHistory",
+          "when": "flint.projectBrowserVisible"
+        },
+        {
+          "command": "flint.searchResourcesByType",
+          "when": "false"
+        },
+        {
+          "command": "flint.createResourceJson",
+          "when": "false"
+        },
+        {
+          "command": "flint.createAllMissingResourceJson",
+          "when": "false"
+        },
+        {
+          "command": "flint.validateResourceJson",
+          "when": "false"
+        },
+        {
+          "command": "flint.openConfig"
+        },
+        {
+          "command": "flint.getStarted"
+        },
+        {
+          "command": "flint.handleInvalidConfig",
+          "when": "false"
+        },
+        {
+          "command": "flint.addGateway"
+        },
+        {
+          "command": "flint.removeGateway"
+        },
+        {
+          "command": "flint.addProjectPaths"
+        },
+        {
+          "command": "flint.navigateToGatewayFromNode",
+          "when": "false"
+        },
+        {
+          "command": "flint.navigateToDesignerFromNode",
+          "when": "false"
+        },
+        {
+          "command": "flint.openWithKindling",
+          "when": "false"
+        },
+        {
+          "command": "flint.compareDecodedWithGit"
+        },
+        {
+          "command": "flint.editEmbeddedScript",
+          "when": "false"
+        },
+        {
+          "command": "flint.compareConflictScripts",
+          "when": "false"
+        },
+        {
+          "command": "flint.acceptCurrentScript",
+          "when": "false"
+        },
+        {
+          "command": "flint.acceptIncomingScript",
+          "when": "false"
+        },
+        {
+          "command": "flint.openInDesigner",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Flint",
+      "properties": {
+        "flint.showInheritedResources": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inherited resources in the project browser"
+        },
+        "flint.groupResourcesByType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group resources by type in the project browser"
+        },
+        "flint.autoRefreshProjects": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh projects when files change"
+        },
+        "flint.showEmptyResourceTypes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show resource types even when they have no resources"
+        },
+        "flint.has83DesignerLauncher": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether Ignition Designer Launcher (8.3+) is installed"
+        },
+        "flint.hasKindlingInstalled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether Kindling is installed and available in system PATH"
+        },
+        "flint.kindlingExecutablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to Kindling executable (useful for WSL or non-standard installations)",
+          "scope": "machine"
+        },
+        "flint.enablePythonAutocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable autocomplete for Ignition Python script modules"
+        },
+        "flint.enableDesignerLspCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Designer LSP completions for system functions (requires connected Designer with Flint Bridge module)"
+        },
+        "flint.enableLocalScriptCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable local script module completions (project scripts indexed from filesystem)"
+        },
+        "flint.pythonAutocompleteIncludeInherited": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include inherited modules from parent projects in Python autocomplete"
+        },
+        "flint.pythonAutocompleteCacheTimeout": {
+          "type": "number",
+          "default": 60,
+          "description": "Cache timeout for Python AST parsing in seconds (0 to disable caching)",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "flint.decodedJson.autoCloseOriginal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically close the original JSON file when opening a decoded view"
+        },
+        "flint.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to the Flint configuration file (relative to workspace or absolute). If not set, Flint will search standard locations."
+        },
+        "flint.localConfigPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to a local override config file (not version controlled). Local configs are merged with the base config."
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "flint",
+        "label": "Flint Ignition Debugger",
+        "languages": ["python"],
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the Python script to debug",
+                "default": "${file}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Stop at entry point",
+                "default": false
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "flint",
+            "name": "Debug Ignition Script",
+            "request": "launch",
+            "program": "${file}",
+            "stopOnEntry": false
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Flint: Debug Ignition Script",
+            "description": "Debug an Ignition Python script via Designer",
+            "body": {
+              "type": "flint",
+              "name": "Debug ${1:script}",
+              "request": "launch",
+              "program": "^\"\\${file}\"",
+              "stopOnEntry": false
+            }
+          }
+        ]
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "python"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": [
+          "flint.config.json",
+          "**/flint.config.json",
+          ".flint/config.json",
+          "**/.flint/config.json",
+          ".flint-config.json",
+          "**/.flint-config.json",
+          ".vscode/flint.config.json",
+          "**/.vscode/flint.config.json"
+        ],
+        "url": "./schemas/flint-config.schema.json"
+      },
+      {
+        "fileMatch": [
+          "flint.local.json",
+          "**/flint.local.json",
+          ".flint/config.local.json",
+          "**/.flint/config.local.json"
+        ],
+        "url": "./schemas/flint-config.schema.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "flint.searchResources",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "flint.projectBrowserVisible"
+      },
+      {
+        "command": "flint.findInResources",
+        "key": "ctrl+shift+alt+f",
+        "mac": "cmd+shift+alt+f",
+        "when": "flint.projectBrowserVisible"
+      },
+      {
+        "command": "flint.navigateToScriptElement",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "editorTextFocus && editorLangId == python"
+      },
+      {
+        "command": "flint.copyQualifiedPath",
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c",
+        "when": "editorTextFocus && editorLangId == python"
+      },
+      {
+        "command": "flint.editEmbeddedScript",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorTextFocus && resourceExtname == .json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "compile:esbuild": "node esbuild.config.mjs",
+    "watch": "tsc -w -p ./",
+    "watch:esbuild": "node esbuild.config.mjs --watch",
+    "package": "npm run clean && node esbuild.config.mjs --production",
+    "clean": "rm -rf out",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings 0",
+    "lint:unused": "eslint . --fix",
+    "prettier": "prettier --write \"src/**/*.{ts,js}\"",
+    "prettier:check": "prettier --check \"src/**/*.{ts,js}\"",
+    "pretest": "npm run compile && npm run lint",
+    "test": "node ./out/src/test/runTest.js",
+    "test:integration": "npm run compile && node ./out/src/test/runIntegrationTest.js",
+    "prepare": "ts-patch install && husky"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.2.3",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^16.18.126",
+    "@types/vscode": "^1.102.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": ">=0.25.0",
+    "eslint": "^9.33.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "mocha": "^11.7.5",
+    "nyc": "^17.1.0",
+    "prettier": "^3.6.2",
+    "ts-patch": "^3.3.0",
+    "typescript": "^5.9.3",
+    "typescript-transform-paths": "^3.5.5"
+  },
+  "dependencies": {
+    "glob": "^8.1.0",
+    "ws": "^8.19.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }

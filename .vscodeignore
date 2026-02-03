@@ -1,9 +1,64 @@
-.vscode/**
+# Source files (compiled output in out/ is included)
+src/**
+tsconfig.json
+tsconfig.*.json
+
+# Dependencies - all bundled via esbuild, exclude entirely
+node_modules/**
+
+# Test files and output
+**/*.test.ts
+**/*.test.js
+**/test/**
 .vscode-test/**
-test/**
+coverage/**
+.nyc_output/**
+
+# Development config
+.vscode/**
+.github/**
+.git/**
 .gitignore
-.yarnrc
+.gitattributes
+.editorconfig
+.prettierrc*
+.prettierignore
+prettier.config.*
+eslint.config.*
+.eslintrc*
+.eslintignore
+.husky/**
+
+# Build and package files
+*.vsix
+*.tsbuildinfo
+webpack.config.js
+rollup.config.js
+esbuild.config.*
+
+# Documentation (keep README.md and CHANGELOG.md)
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+docs/**
+CLAUDE.md
+.claude/**
+test-fixtures/**
+
+# Misc development files
 vsc-extension-quickstart.md
-**/jsconfig.json
+.yarnrc
+yarn.lock
+package-lock.json
+jsconfig.json
 **/*.map
-**/.eslintrc.json
+*.log
+.DS_Store
+Thumbs.db
+temp/**
+tmp/**
+
+# Type definitions (compiled JS doesn't need them in package)
+**/*.d.ts
+!out/**/*.d.ts
+

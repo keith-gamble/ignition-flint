@@ -1,0 +1,11 @@
+{
+  "files.exclude": {
+    "node_modules/": true,
+    ".vscode-test/": true
+  },
+   "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}

@@ -1,0 +1,516 @@
+/**
+ * Setup Wizard Webview Styles
+ * Uses VS Code CSS variables for theme integration
+ */
+
+:root {
+    --container-padding: 24px;
+    --input-border-radius: 4px;
+    --button-padding: 8px 16px;
+    --section-gap: 32px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+    padding: var(--container-padding);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.wizard-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* Header */
+.wizard-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.wizard-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.wizard-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--vscode-foreground);
+}
+
+/* Intro text */
+.intro-text {
+    font-size: 13px;
+    color: var(--vscode-descriptionForeground);
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+.intro-text code {
+    background-color: var(--vscode-textCodeBlock-background);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+}
+
+/* Sections */
+.section {
+    margin-bottom: var(--section-gap);
+    padding-bottom: var(--section-gap);
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.section:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--vscode-foreground);
+}
+
+.section-description {
+    font-size: 13px;
+    color: var(--vscode-descriptionForeground);
+    margin: 0 0 16px 0;
+    line-height: 1.6;
+}
+
+.subsection-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 16px 0 8px 0;
+    color: var(--vscode-foreground);
+}
+
+/* Form Groups */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--vscode-foreground);
+}
+
+.form-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: var(--input-border-radius);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+
+.form-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.form-input.error {
+    border-color: var(--vscode-inputValidation-errorBorder, #f14c4c);
+}
+
+.error-message {
+    color: var(--vscode-inputValidation-errorForeground, #f14c4c);
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.global-error {
+    background-color: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+    border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+    border-radius: var(--input-border-radius);
+    padding: 12px;
+    margin-bottom: 16px;
+    color: var(--vscode-inputValidation-errorForeground, #f14c4c);
+    font-size: 13px;
+}
+
+/* Checkbox */
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--vscode-checkbox-background);
+}
+
+.checkbox-label {
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Project Paths List */
+.path-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0 0;
+}
+
+.path-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background-color: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.1));
+    border-radius: var(--input-border-radius);
+    border: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.path-item-text {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 12px;
+}
+
+.path-item-remove {
+    background: none;
+    border: none;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: 0.6;
+    font-size: 14px;
+    border-radius: 3px;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.path-item-remove:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+
+/* Path Item Content (for project count layout) */
+.path-item-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+}
+
+.path-item-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Project Count Badges */
+.path-project-count {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    align-self: flex-start;
+}
+
+.project-count-success {
+    background-color: var(--vscode-testing-iconPassed, #89d185);
+    color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.project-count-empty {
+    background-color: var(--vscode-editorWarning-foreground, #cca700);
+    color: var(--vscode-editor-background, #1e1e1e);
+}
+
+/* Path Warning State */
+.path-item-warning {
+    position: relative;
+    flex-direction: column;
+    align-items: stretch;
+    padding-right: 40px;
+    background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.1));
+    border-color: var(--vscode-inputValidation-warningBorder, #cca700);
+}
+
+.path-item-warning .path-item-content {
+    width: 100%;
+}
+
+.path-item-warning .path-item-remove {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+}
+
+.path-warning-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.path-warning-message {
+    font-size: 12px;
+    color: var(--vscode-inputValidation-warningForeground, #cca700);
+    margin: 4px 0 8px 24px;
+    line-height: 1.4;
+}
+
+.path-warning-message strong {
+    font-weight: 600;
+}
+
+.path-warning-message em {
+    font-style: italic;
+}
+
+.path-warning-actions {
+    margin-left: 24px;
+}
+
+/* Small Button Variant */
+.btn-small {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.btn-fix-path {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-fix-path:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.btn-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* Discovered Projects */
+.discovered-projects-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--vscode-panel-border);
+}
+
+.discovered-projects-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.discovered-project-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.discovered-project-tag .project-parent {
+    opacity: 0.7;
+    font-size: 11px;
+}
+
+/* Gateway Cards */
+.gateways-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.gateway-card {
+    background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.1));
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    padding: 16px;
+}
+
+.gateway-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.gateway-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0;
+}
+
+.gateway-card-remove {
+    background: none;
+    border: none;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: 0.6;
+    font-size: 12px;
+    border-radius: 3px;
+}
+
+.gateway-card-remove:hover {
+    opacity: 1;
+    color: var(--vscode-errorForeground);
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.gateway-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.gateway-projects-section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--vscode-panel-border);
+}
+
+.gateway-projects-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vscode-descriptionForeground);
+    margin: 0 0 8px 0;
+}
+
+.gateway-projects-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.project-checkbox-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background-color: var(--vscode-list-hoverBackground);
+    border-radius: var(--input-border-radius);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.project-checkbox-item:hover {
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.project-checkbox-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.project-checkbox-item label {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.no-projects-message {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 20px 16px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    font-style: italic;
+    border: 1px dashed var(--vscode-panel-border);
+    border-radius: var(--input-border-radius);
+    margin-top: 16px;
+}
+
+/* Buttons */
+.btn {
+    padding: var(--button-padding);
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: var(--input-border-radius);
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.1s ease, opacity 0.1s ease;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.btn-secondary {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* Button Container */
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+/* Utility Classes */
+.mt-2 {
+    margin-top: 8px;
+}
+
+.mt-4 {
+    margin-top: 16px;
+}

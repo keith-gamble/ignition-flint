@@ -1,0 +1,395 @@
+/**
+ * Styles for the Conflict Merge Webview
+ * 3-panel layout with Monaco editors
+ */
+
+/* Reset and base styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground, #cccccc);
+    background-color: var(--vscode-editor-background, #1e1e1e);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Main container */
+.merge-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 12px;
+    gap: 12px;
+}
+
+/* Header */
+.merge-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border, #404040);
+}
+
+.merge-header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vscode-foreground, #cccccc);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-path {
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+.json-key-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background-color: var(--vscode-badge-background, #4d4d4d);
+    color: var(--vscode-badge-foreground, #ffffff);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+/* Top panels container */
+.top-panels {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Individual panel */
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-panel-border, #404040);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Panel header */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--vscode-sideBarSectionHeader-background, #333333);
+    border-bottom: 1px solid var(--vscode-panel-border, #404040);
+}
+
+.panel-title {
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.panel-hint {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground, #9d9d9d);
+}
+
+/* Current panel - slight green tint */
+.current-panel .panel-header {
+    border-left: 3px solid var(--vscode-gitDecoration-addedResourceForeground, #73c991);
+}
+
+/* Incoming panel - slight blue tint */
+.incoming-panel .panel-header {
+    border-left: 3px solid var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+/* Result panel */
+.result-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 0.8;
+    min-height: 200px;
+    background-color: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-panel-border, #404040);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.result-panel .panel-header {
+    border-left: 3px solid var(--vscode-gitDecoration-untrackedResourceForeground, #6dbbff);
+}
+
+/* Editor container */
+.editor-container {
+    flex: 1;
+    min-height: 100px;
+    overflow: hidden;
+}
+
+.result-editor {
+    min-height: 150px;
+}
+
+/* Panel actions (Use This Version buttons) */
+.panel-actions {
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    background-color: var(--vscode-sideBarSectionHeader-background, #333333);
+    border-top: 1px solid var(--vscode-panel-border, #404040);
+}
+
+/* Footer */
+.merge-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--vscode-panel-border, #404040);
+}
+
+.footer-spacer {
+    flex: 1;
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn:active {
+    opacity: 0.8;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+}
+
+.btn-primary:hover {
+    background-color: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+.btn-secondary {
+    background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+    color: var(--vscode-button-secondaryForeground, #ffffff);
+}
+
+.btn-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+/* Icon button (for word wrap toggle) */
+.btn-icon {
+    padding: 6px;
+    background-color: transparent;
+    color: var(--vscode-foreground, #cccccc);
+    border: 1px solid var(--vscode-panel-border, #404040);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.btn-icon.active {
+    background-color: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+    border-color: var(--vscode-button-background, #0e639c);
+}
+
+.btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Selected "Use This Version" button state */
+.btn-secondary.selected {
+    background-color: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #ffffff);
+    border: 2px solid var(--vscode-focusBorder, #007fd4);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, #007fd4);
+}
+
+.btn-secondary.selected:hover {
+    background-color: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--vscode-editor-background, #1e1e1e);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--vscode-panel-border, #404040);
+    border-top-color: var(--vscode-button-background, #0e639c);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Monaco editor overrides */
+.monaco-editor {
+    padding-top: 4px;
+}
+
+/* Scrollbar styling to match VS Code */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--vscode-scrollbarSlider-background, rgba(100, 100, 100, 0.2));
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background, rgba(100, 100, 100, 0.4));
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.6));
+}
+
+/* Responsive adjustments */
+@media (max-height: 600px) {
+    .top-panels {
+        flex: 1.2;
+    }
+
+    .result-panel {
+        flex: 0.6;
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 800px) {
+    .top-panels {
+        flex-direction: column;
+    }
+
+    .panel {
+        min-height: 200px;
+    }
+}
+
+/* Focus styles for accessibility */
+.btn:focus {
+    outline: 2px solid var(--vscode-focusBorder, #007fd4);
+    outline-offset: 2px;
+}
+
+/* Error state */
+.error-message {
+    padding: 12px;
+    background-color: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+    border: 1px solid var(--vscode-inputValidation-errorBorder, #be1100);
+    border-radius: 4px;
+    color: var(--vscode-inputValidation-errorForeground, #ffffff);
+    margin: 8px 0;
+}
+
+/* ============================================================================
+   DIFF HIGHLIGHTING STYLES
+   ============================================================================ */
+
+/* Current editor diff highlighting (green for "ours") */
+.diff-line-current {
+    background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(155, 185, 85, 0.2)) !important;
+}
+
+.diff-glyph-current {
+    background-color: var(--vscode-diffEditor-insertedTextBackground, rgba(155, 185, 85, 0.4));
+    margin-left: 3px;
+    width: 4px !important;
+}
+
+/* Incoming editor diff highlighting (blue for "theirs") */
+.diff-line-incoming {
+    background-color: var(--vscode-diffEditor-removedLineBackground, rgba(255, 0, 0, 0.15)) !important;
+}
+
+.diff-glyph-incoming {
+    background-color: var(--vscode-diffEditorGutter-removedLineBackground, rgba(255, 0, 0, 0.4));
+    margin-left: 3px;
+    width: 4px !important;
+}
+
+/* Alternative colors that are more distinguishable:
+   - Current (green): represents what you have
+   - Incoming (orange/yellow): represents what's coming in
+   These colors match VS Code's merge conflict highlighting */
+@supports (color: var(--vscode-editorGutter-addedBackground)) {
+    .diff-line-current {
+        background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(72, 166, 73, 0.15)) !important;
+    }
+
+    .diff-glyph-current {
+        background-color: var(--vscode-editorGutter-addedBackground, rgba(72, 166, 73, 0.6));
+    }
+
+    .diff-line-incoming {
+        background-color: var(--vscode-merge-incomingContentBackground, rgba(64, 166, 255, 0.15)) !important;
+    }
+
+    .diff-glyph-incoming {
+        background-color: var(--vscode-editorGutter-modifiedBackground, rgba(64, 166, 255, 0.6));
+    }
+}

@@ -1,16 +1,36 @@
 {
-	"compilerOptions": {
-	  "outDir": "out",
-	  "target": "es2020",
-	  "lib": ["dom", "esnext", "es2020"],
-	  "strict": true,
-	  "module": "commonjs",
-	  "forceConsistentCasingInFileNames": true,
-	  "noEmitOnError": true,
-	  "strictNullChecks": true,
-	  "sourceMap": true,
-	  "rootDir": "."
-	},
-	"include": ["./src/**/*"],
-	"exclude": ["node_modules", ".vscode-test"]
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020", "dom"],
+    "outDir": "./out",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/core/*": ["src/core/*"],
+      "@/services/*": ["src/services/*"],
+      "@/commands/*": ["src/commands/*"],
+      "@/views/*": ["src/views/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/providers/*": ["src/providers/*"],
+      "@/test/*": ["src/test/*"]
+    },
+    "plugins": [
+      { "transform": "typescript-transform-paths" }
+    ]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules", 
+    ".vscode-test", 
+    "out"
+  ]
 }

@@ -5,7 +5,7 @@
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
-			"preLaunchTask": "tsc: watch - tsconfig.json",
+			"preLaunchTask": "npm: compile",
 			"outFiles": [
                 "${workspaceRoot}/out/src/**/*.js"
             ],
