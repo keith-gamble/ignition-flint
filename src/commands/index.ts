@@ -28,7 +28,6 @@ export { RenameResourceCommand } from './resources/RenameResourceCommand';
 export { DuplicateResourceCommand } from './resources/DuplicateResourceCommand';
 export { CopyPathCommand } from './resources/CopyPathCommand';
 export { OpenResourceCommand } from './resources/OpenResourceCommand';
-export { OpenInDesignerCommand } from './resources/OpenInDesignerCommand';
 
 // Resource JSON Commands
 export { CreateResourceJsonCommand } from './resourceJson/CreateResourceJsonCommand';

@@ -93,11 +93,7 @@ export const COMMANDS = {
     // Conflict resolution commands
     COMPARE_CONFLICT_SCRIPTS: 'flint.compareConflictScripts',
     ACCEPT_CURRENT_SCRIPT: 'flint.acceptCurrentScript',
-    ACCEPT_INCOMING_SCRIPT: 'flint.acceptIncomingScript',
-
-    // Script Console commands
-    OPEN_SCRIPT_CONSOLE: 'flint.openScriptConsole',
-    RUN_IN_FLINT: 'flint.runInFlint'
+    ACCEPT_INCOMING_SCRIPT: 'flint.acceptIncomingScript'
 } as const;
 
 /**
@@ -192,10 +188,7 @@ export const COMMAND_TITLES = {
 
     [COMMANDS.COMPARE_CONFLICT_SCRIPTS]: 'Compare Conflict Scripts',
     [COMMANDS.ACCEPT_CURRENT_SCRIPT]: 'Accept Current Script',
-    [COMMANDS.ACCEPT_INCOMING_SCRIPT]: 'Accept Incoming Script',
-
-    [COMMANDS.OPEN_SCRIPT_CONSOLE]: 'Open Script Console',
-    [COMMANDS.RUN_IN_FLINT]: 'Run in Flint'
+    [COMMANDS.ACCEPT_INCOMING_SCRIPT]: 'Accept Incoming Script'
 } as const;
 
 /**

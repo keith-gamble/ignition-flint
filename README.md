@@ -8,22 +8,6 @@ A powerful VS Code extension for working with Ignition SCADA/HMI projects, provi
 
 ## Features
 
-### Debugging with Designer Bridge
-
-Flint supports full Python debugging when used with the [Flint Designer Bridge](https://github.com/bw-design-group/flint-designer-bridge) module:
-
-- **Breakpoints**: Set breakpoints in your Python scripts and pause execution
-- **Step debugging**: Step over, into, and out of functions
-- **Variable inspection**: View local and global variables at any breakpoint
-- **Debug console**: Execute Python expressions in the current debug context
-- **Output capture**: See print statements and errors in the VS Code debug console
-
-To enable debugging:
-1. Install the [Flint Designer Bridge](https://github.com/bw-design-group/flint-designer-bridge) module on your Ignition gateway
-2. Launch a Designer instance
-3. Flint will automatically detect the running Designer
-4. Set breakpoints and start debugging from VS Code
-
 ### Project Browser
 - **Hierarchical tree view** of all Ignition project resources
 - **Multiple project support** with easy switching between projects
@@ -381,10 +365,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **Issues**: [GitHub Issues](https://github.com/bw-design-group/flint-vscode-extension/issues)
 - **Documentation**: [Wiki](https://github.com/bw-design-group/flint-vscode-extension/wiki)
 - **Discussions**: [GitHub Discussions](https://github.com/bw-design-group/flint-vscode-extension/discussions)
-
-## Related Projects
-
-- [Flint Designer Bridge](https://github.com/bw-design-group/flint-designer-bridge) - Ignition module that enables debugging and script execution
 
 ## Acknowledgments
 

@@ -36,12 +36,9 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
 
     /**
      * Provides completion items for the current position in the document.
-     * Uses hybrid mode: tries Designer LSP first for system functions,
-     * falls back to local indexing when Designer is not connected.
      *
      * Controlled by settings:
      * - flint.enablePythonAutocomplete: Master switch for all completions
-     * - flint.enableDesignerLspCompletion: Enable/disable Designer LSP completions
      * - flint.enableLocalScriptCompletion: Enable/disable local script indexing
      */
     async provideCompletionItems(
@@ -57,13 +54,7 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
         }
 
         // Get individual completion source settings
-        const enableDesignerLsp = config.get<boolean>('enableDesignerLspCompletion', true);
         const enableLocalScript = config.get<boolean>('enableLocalScriptCompletion', true);
-
-        // If both sources are disabled, return nothing
-        if (!enableDesignerLsp && !enableLocalScript) {
-            return null;
-        }
 
         if (!this.completionService || !this.projectScannerService || !this.gatewayManagerService) {
             return null;
@@ -83,7 +74,7 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
         if (!modulePathMatch) {
             // Check if we should provide root module completions
             if (this.shouldProvideRootCompletions(linePrefix)) {
-                return this.getRootCompletions(projectId, enableDesignerLsp, enableLocalScript);
+                return this.getRootCompletions(projectId, enableLocalScript);
             }
             return null;
         }
@@ -95,7 +86,6 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
             prefix: isComplete ? prefix : this.getParentPrefix(prefix),
             scope: CompletionScope.FILE,
             projectId,
-            includeDesignerLsp: enableDesignerLsp,
             includeLocalScripts: enableLocalScript
         });
 
@@ -122,11 +112,7 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
     /**
      * Gets root level completions (empty prefix)
      */
-    private async getRootCompletions(
-        projectId: string,
-        enableDesignerLsp: boolean,
-        enableLocalScript: boolean
-    ): Promise<vscode.CompletionItem[]> {
+    private async getRootCompletions(projectId: string, enableLocalScript: boolean): Promise<vscode.CompletionItem[]> {
         if (!this.completionService) {
             return [];
         }
@@ -135,7 +121,6 @@ export class PythonCompletionProvider implements vscode.CompletionItemProvider {
             prefix: '',
             scope: CompletionScope.FILE,
             projectId,
-            includeDesignerLsp: enableDesignerLsp,
             includeLocalScripts: enableLocalScript
         });
 

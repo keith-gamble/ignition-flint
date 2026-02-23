@@ -1,14 +1,11 @@
 /**
  * @module PythonCompletionService
  * @description Unified completion service for Python code in Ignition projects.
- * Consolidates completion logic used by both PythonCompletionProvider (for .py files)
- * and ScriptConsoleViewProvider (for Script Console).
+ * Consolidates completion logic used by PythonCompletionProvider (for .py files).
  *
  * Completion sources:
  * 1. Context variables - scope-specific variables (designer, gateway, session, page, view, self)
- * 2. Perspective component properties - self.props.*, self.custom.*, etc.
- * 3. Designer LSP - system.* and project scripts via Designer's ScriptManager
- * 4. Local scripts - fallback when Designer is not connected
+ * 2. Local scripts - project scripts indexed from filesystem
  */
 
 import * as vscode from 'vscode';
@@ -16,11 +13,23 @@ import * as vscode from 'vscode';
 import { ServiceContainer } from '@/core/ServiceContainer';
 import { IServiceLifecycle, ServiceStatus } from '@/core/types/services';
 import { ProjectScannerService } from '@/services/config/ProjectScannerService';
-import { DesignerBridgeService } from '@/services/designer/DesignerBridgeService';
-import { ConnectionState, DesignerConnectionManager } from '@/services/designer/DesignerConnectionManager';
-import { LspClientService, LspCompletionItem } from '@/services/designer/LspClientService';
 import { PythonSymbol } from '@/services/python/PythonASTService';
 import { ScriptModuleIndexService, ScriptModule } from '@/services/python/ScriptModuleIndexService';
+
+/**
+ * Completion item from the completion service
+ */
+export interface CompletionItem {
+    label: string;
+    kind: number;
+    detail?: string;
+    documentation?: string;
+    insertText?: string;
+    insertTextFormat?: number;
+    sortText?: string;
+    filterText?: string;
+    deprecated?: boolean;
+}
 
 /**
  * Completion scope determines which context variables are available
@@ -56,8 +65,6 @@ export interface CompletionRequest {
     perspectiveContext?: PerspectiveCompletionContext | null;
     /** Include local script module completions as fallback */
     includeLocalScripts?: boolean;
-    /** Include Designer LSP completions */
-    includeDesignerLsp?: boolean;
 }
 
 /**
@@ -65,7 +72,7 @@ export interface CompletionRequest {
  */
 export interface CompletionResponse {
     /** Completion items */
-    items: LspCompletionItem[];
+    items: CompletionItem[];
     /** Whether results may be incomplete */
     isIncomplete: boolean;
 }
@@ -80,24 +87,14 @@ export interface IPythonCompletionService extends IServiceLifecycle {
     getCompletions(request: CompletionRequest): Promise<CompletionResponse>;
 
     /**
-     * Converts LSP completion items to VS Code completion items
+     * Converts completion items to VS Code completion items
      */
-    convertToVsCodeItems(items: LspCompletionItem[], prefix: string): vscode.CompletionItem[];
+    convertToVsCodeItems(items: CompletionItem[], prefix: string): vscode.CompletionItem[];
 
     /**
      * Extracts the module path prefix from a line of text
      */
     extractPrefix(lineText: string, cursorPosition: number): { prefix: string; isComplete: boolean } | null;
-
-    /**
-     * Checks if Designer LSP is available
-     */
-    isLspAvailable(): boolean;
-
-    /**
-     * Sets the connection manager (called by consumers that manage their own LSP client)
-     */
-    setConnectionManager(connectionManager: DesignerConnectionManager): void;
 }
 
 /**
@@ -105,29 +102,20 @@ export interface IPythonCompletionService extends IServiceLifecycle {
  */
 export class PythonCompletionService implements IPythonCompletionService {
     private status: ServiceStatus = ServiceStatus.NOT_INITIALIZED;
-    private lspClientService: LspClientService | null = null;
     private scriptModuleIndexService: ScriptModuleIndexService | null = null;
-    private designerBridgeService: DesignerBridgeService | null = null;
     private projectScannerService: ProjectScannerService | null = null;
-    private externalConnectionManager: DesignerConnectionManager | null = null;
 
     constructor(private readonly serviceContainer: ServiceContainer) {}
 
-    async initialize(): Promise<void> {
+    initialize(): Promise<void> {
         this.status = ServiceStatus.INITIALIZING;
 
         // Get services from container
-        this.designerBridgeService = this.serviceContainer.get<DesignerBridgeService>('DesignerBridgeService');
         this.scriptModuleIndexService = this.serviceContainer.get<ScriptModuleIndexService>('ScriptModuleIndexService');
         this.projectScannerService = this.serviceContainer.get<ProjectScannerService>('ProjectScannerService');
 
-        // Initialize LSP client service if Designer Bridge is available
-        if (this.designerBridgeService) {
-            this.lspClientService = new LspClientService(this.serviceContainer);
-            await this.lspClientService.initialize();
-        }
-
         this.status = ServiceStatus.INITIALIZED;
+        return Promise.resolve();
     }
 
     async start(): Promise<void> {
@@ -135,49 +123,17 @@ export class PythonCompletionService implements IPythonCompletionService {
             await this.initialize();
         }
 
-        // Start LSP client and connect to Designer Bridge
-        if (this.lspClientService && this.designerBridgeService) {
-            await this.lspClientService.start();
-
-            // Set connection manager if already connected
-            const connectionManager = this.designerBridgeService.getConnectionManager();
-            if (connectionManager) {
-                this.lspClientService.setConnectionManager(connectionManager);
-            }
-
-            // Subscribe to connection state changes to update LSP client when Designer connects/disconnects
-            this.designerBridgeService.onConnectionStateChanged((state, _designer) => {
-                if (state === ConnectionState.CONNECTED) {
-                    const manager = this.designerBridgeService?.getConnectionManager();
-                    if (manager && this.lspClientService) {
-                        this.lspClientService.setConnectionManager(manager);
-                    }
-                }
-            });
-        }
-
         this.status = ServiceStatus.RUNNING;
     }
 
-    async stop(): Promise<void> {
+    stop(): Promise<void> {
         this.status = ServiceStatus.STOPPING;
-
-        if (this.lspClientService) {
-            await this.lspClientService.stop();
-        }
-
         this.status = ServiceStatus.STOPPED;
+        return Promise.resolve();
     }
 
     async dispose(): Promise<void> {
         await this.stop();
-
-        if (this.lspClientService) {
-            await this.lspClientService.dispose();
-            this.lspClientService = null;
-        }
-
-        this.externalConnectionManager = null;
     }
 
     getStatus(): ServiceStatus {
@@ -185,31 +141,10 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Sets an external connection manager for LSP completions.
-     * Used by ScriptConsoleViewProvider which manages its own LSP client lifecycle.
-     */
-    setConnectionManager(connectionManager: DesignerConnectionManager): void {
-        this.externalConnectionManager = connectionManager;
-
-        // Also update the internal LSP client if it exists
-        if (this.lspClientService) {
-            this.lspClientService.setConnectionManager(connectionManager);
-        }
-    }
-
-    /**
-     * Checks if Designer LSP is available
-     */
-    isLspAvailable(): boolean {
-        return this.lspClientService?.isAvailable() ?? false;
-    }
-
-    /**
      * Gets completion items for the given request.
      */
     async getCompletions(request: CompletionRequest): Promise<CompletionResponse> {
-        const items: LspCompletionItem[] = [];
-        let isIncomplete = false;
+        const items: CompletionItem[] = [];
 
         // 1. Context variables (scope-based) - only at root level
         if (request.prefix === '') {
@@ -217,40 +152,13 @@ export class PythonCompletionService implements IPythonCompletionService {
             items.push(...contextItems);
         }
 
-        // 2. Perspective self.* completions (both top-level categories and nested properties)
-        // Delegate to Designer to dynamically determine available property trees
-        if (
-            request.scope === CompletionScope.PERSPECTIVE &&
-            (request.prefix === 'self' || request.prefix.startsWith('self.')) &&
-            request.perspectiveContext?.componentPath
-        ) {
-            const componentItems = await this.getPerspectiveComponentCompletions(
-                request.perspectiveContext,
-                request.prefix
-            );
-            items.push(...componentItems);
-        }
-
-        // 4. Designer LSP completions (system.*, project scripts)
-        // Skip for self.* prefixes as those are component-specific
-        if (request.includeDesignerLsp !== false && !request.prefix.startsWith('self') && this.isLspAvailable()) {
-            const lspItems = await this.getDesignerLspCompletions(request.prefix);
-            if (lspItems) {
-                items.push(...lspItems.items);
-                isIncomplete = lspItems.isIncomplete;
-            }
-        }
-
-        // 5. Local script completions (fallback when Designer not connected)
+        // 2. Local script completions
         if (request.includeLocalScripts && request.projectId) {
             const localItems = await this.getLocalScriptCompletions(request.projectId, request.prefix);
-            // Only add items that aren't already present (avoid duplicates with LSP)
-            const existingLabels = new Set(items.map(item => item.label.toLowerCase()));
-            const uniqueLocalItems = localItems.filter(item => !existingLabels.has(item.label.toLowerCase()));
-            items.push(...uniqueLocalItems);
+            items.push(...localItems);
         }
 
-        return { items, isIncomplete };
+        return { items, isIncomplete: false };
     }
 
     /**
@@ -259,8 +167,8 @@ export class PythonCompletionService implements IPythonCompletionService {
     private getContextVariables(
         scope: CompletionScope,
         perspectiveContext?: PerspectiveCompletionContext | null
-    ): LspCompletionItem[] {
-        const items: LspCompletionItem[] = [];
+    ): CompletionItem[] {
+        const items: CompletionItem[] = [];
 
         if (scope === CompletionScope.DESIGNER || scope === CompletionScope.FILE) {
             items.push(
@@ -340,61 +248,9 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Gets Perspective component property completions via RPC.
-     * Dynamically retrieves available property trees from the actual component.
+     * Gets local script module completions
      */
-    private async getPerspectiveComponentCompletions(
-        perspectiveContext: PerspectiveCompletionContext,
-        prefix: string
-    ): Promise<LspCompletionItem[]> {
-        const connectionManager = this.getConnectionManager();
-        if (!connectionManager) {
-            return [];
-        }
-
-        const { sessionId, pageId, viewInstanceId, componentPath } = perspectiveContext;
-        if (!sessionId || !pageId || !viewInstanceId || !componentPath) {
-            return [];
-        }
-
-        try {
-            const result = await connectionManager.perspectiveGetComponentCompletions(
-                sessionId,
-                pageId,
-                viewInstanceId,
-                componentPath,
-                prefix
-            );
-            return result.items || [];
-        } catch (error) {
-            console.error('[PythonCompletionService] Error getting Perspective component completions:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Gets completions from Designer LSP
-     */
-    private async getDesignerLspCompletions(prefix: string): Promise<CompletionResponse | null> {
-        if (!this.lspClientService?.isAvailable()) {
-            return null;
-        }
-
-        const result = await this.lspClientService.getCompletions(prefix);
-        if (!result) {
-            return null;
-        }
-
-        return {
-            items: result.items,
-            isIncomplete: result.isIncomplete
-        };
-    }
-
-    /**
-     * Gets local script module completions (fallback when Designer not connected)
-     */
-    private async getLocalScriptCompletions(projectId: string, prefix: string): Promise<LspCompletionItem[]> {
+    private async getLocalScriptCompletions(projectId: string, prefix: string): Promise<CompletionItem[]> {
         if (!this.scriptModuleIndexService) {
             return [];
         }
@@ -406,8 +262,8 @@ export class PythonCompletionService implements IPythonCompletionService {
             // Get VS Code completion items from the index service
             const vsCodeItems = await this.scriptModuleIndexService.getCompletionItems(projectId, prefix);
 
-            // Convert VS Code items to LSP items
-            return vsCodeItems.map(item => this.convertVsCodeItemToLsp(item));
+            // Convert VS Code items to completion items
+            return vsCodeItems.map(item => this.convertVsCodeItemToCompletionItem(item));
         } catch (error) {
             console.error('[PythonCompletionService] Error getting local script completions:', error);
             return [];
@@ -465,7 +321,6 @@ export class PythonCompletionService implements IPythonCompletionService {
         }
 
         // 2. If not found by name, search workspace folders for ANY Ignition project
-        // (We're connected to Designer for LSP completions - local indexing is just for deep search)
         if (!projectPath) {
             projectPath = await this.findAnyProjectInWorkspace();
         }
@@ -548,98 +403,9 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Searches workspace folders for an Ignition project matching the given name.
+     * Converts a VS Code completion item to a completion item
      */
-    private async findProjectInWorkspace(projectName: string): Promise<string | null> {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-            return null;
-        }
-
-        for (const folder of workspaceFolders) {
-            const projectPath = await this.searchFolderForProject(folder.uri.fsPath, projectName, 0);
-            if (projectPath) {
-                return projectPath;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Recursively searches a folder for an Ignition project matching the given name.
-     * Limited to 3 levels deep to avoid excessive searching.
-     */
-    private async searchFolderForProject(
-        folderPath: string,
-        projectName: string,
-        depth: number
-    ): Promise<string | null> {
-        if (depth > 3) {
-            return null;
-        }
-
-        try {
-            const path = await import('path');
-            const projectJsonPath = path.join(folderPath, 'project.json');
-
-            try {
-                const stat = await vscode.workspace.fs.stat(vscode.Uri.file(projectJsonPath));
-                if (stat.type === vscode.FileType.File) {
-                    // Found a project.json, check if it matches
-                    const folderName = path.basename(folderPath);
-                    const folderNameLower = folderName.toLowerCase();
-                    const searchLower = projectName.toLowerCase();
-
-                    // Helper to check if names match (exact or partial)
-                    const namesMatch = (name1: string, name2: string): boolean => {
-                        const n1 = name1.toLowerCase();
-                        const n2 = name2.toLowerCase();
-                        return n1 === n2 || n1.includes(n2) || n2.includes(n1);
-                    };
-
-                    if (namesMatch(folderNameLower, searchLower)) {
-                        return folderPath;
-                    }
-
-                    // Check project.json title
-                    try {
-                        const content = await vscode.workspace.fs.readFile(vscode.Uri.file(projectJsonPath));
-                        const projectJson = JSON.parse(content.toString());
-                        if (projectJson.title && namesMatch(projectJson.title, projectName)) {
-                            return folderPath;
-                        }
-                    } catch {
-                        // Ignore JSON parse errors
-                    }
-                }
-            } catch {
-                // No project.json at this level
-            }
-
-            // Search subdirectories
-            const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(folderPath));
-            for (const [name, type] of entries) {
-                if (type === vscode.FileType.Directory && !name.startsWith('.')) {
-                    const path = await import('path');
-                    const subPath = path.join(folderPath, name);
-                    const result = await this.searchFolderForProject(subPath, projectName, depth + 1);
-                    if (result) {
-                        return result;
-                    }
-                }
-            }
-        } catch {
-            // Ignore errors
-        }
-
-        return null;
-    }
-
-    /**
-     * Converts a VS Code completion item to an LSP completion item
-     */
-    private convertVsCodeItemToLsp(vsCodeItem: vscode.CompletionItem): LspCompletionItem {
+    private convertVsCodeItemToCompletionItem(vsCodeItem: vscode.CompletionItem): CompletionItem {
         const label = typeof vsCodeItem.label === 'string' ? vsCodeItem.label : vsCodeItem.label.label;
         const labelDetail = typeof vsCodeItem.label === 'object' ? vsCodeItem.label.detail : undefined;
 
@@ -663,7 +429,7 @@ export class PythonCompletionService implements IPythonCompletionService {
 
         return {
             label,
-            kind: this.mapVsCodeKindToLspKind(vsCodeItem.kind),
+            kind: this.mapVsCodeKindToCompletionKind(vsCodeItem.kind),
             detail: labelDetail || vsCodeItem.detail,
             documentation,
             insertText,
@@ -674,9 +440,9 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Maps VS Code completion item kind to LSP kind
+     * Maps VS Code completion item kind to completion kind
      */
-    private mapVsCodeKindToLspKind(kind: vscode.CompletionItemKind | undefined): number {
+    private mapVsCodeKindToCompletionKind(kind: vscode.CompletionItemKind | undefined): number {
         switch (kind) {
             case vscode.CompletionItemKind.Text:
                 return 1;
@@ -706,66 +472,66 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Converts LSP completion items to VS Code completion items
+     * Converts completion items to VS Code completion items
      */
-    convertToVsCodeItems(items: LspCompletionItem[], prefix: string): vscode.CompletionItem[] {
-        return items.map(lspItem => this.convertLspItemToVsCode(lspItem, prefix));
+    convertToVsCodeItems(items: CompletionItem[], prefix: string): vscode.CompletionItem[] {
+        return items.map(item => this.convertCompletionItemToVsCode(item, prefix));
     }
 
     /**
-     * Converts an LSP completion item to a VS Code completion item
+     * Converts a completion item to a VS Code completion item
      */
-    private convertLspItemToVsCode(lspItem: LspCompletionItem, prefix: string): vscode.CompletionItem {
-        const kind = this.mapLspKindToVsCodeKind(lspItem.kind);
-        const item = new vscode.CompletionItem(lspItem.label, kind);
+    private convertCompletionItemToVsCode(item: CompletionItem, prefix: string): vscode.CompletionItem {
+        const kind = this.mapCompletionKindToVsCodeKind(item.kind);
+        const vsCodeItem = new vscode.CompletionItem(item.label, kind);
 
         // Set detail if available
-        if (lspItem.detail) {
-            item.detail = lspItem.detail;
+        if (item.detail) {
+            vsCodeItem.detail = item.detail;
         }
 
         // Set documentation if available
-        if (lspItem.documentation) {
-            item.documentation = new vscode.MarkdownString(lspItem.documentation);
+        if (item.documentation) {
+            vsCodeItem.documentation = new vscode.MarkdownString(item.documentation);
         }
 
         // Set insert text
-        if (lspItem.insertText) {
-            if (lspItem.insertTextFormat === 2) {
+        if (item.insertText) {
+            if (item.insertTextFormat === 2) {
                 // Snippet format
-                item.insertText = new vscode.SnippetString(lspItem.insertText);
+                vsCodeItem.insertText = new vscode.SnippetString(item.insertText);
             } else {
-                item.insertText = lspItem.insertText;
+                vsCodeItem.insertText = item.insertText;
             }
         }
 
         // Set sort and filter text
-        if (lspItem.sortText) {
-            item.sortText = lspItem.sortText;
+        if (item.sortText) {
+            vsCodeItem.sortText = item.sortText;
         }
-        if (lspItem.filterText) {
-            item.filterText = lspItem.filterText;
+        if (item.filterText) {
+            vsCodeItem.filterText = item.filterText;
         }
 
         // Mark as deprecated if applicable
-        if (lspItem.deprecated) {
-            item.tags = [vscode.CompletionItemTag.Deprecated];
+        if (item.deprecated) {
+            vsCodeItem.tags = [vscode.CompletionItemTag.Deprecated];
         }
 
         // Add source indicator in detail
-        const sourcePrefix = prefix ? `${prefix}.${lspItem.label}` : lspItem.label;
-        if (!item.detail) {
-            item.detail = `Ignition: ${sourcePrefix}`;
+        const sourcePrefix = prefix ? `${prefix}.${item.label}` : item.label;
+        if (!vsCodeItem.detail) {
+            vsCodeItem.detail = `Ignition: ${sourcePrefix}`;
         }
 
-        return item;
+        return vsCodeItem;
     }
 
     /**
-     * Maps LSP completion item kind to VS Code completion item kind
+     * Maps completion item kind to VS Code completion item kind
      */
-    private mapLspKindToVsCodeKind(lspKind: number): vscode.CompletionItemKind {
-        switch (lspKind) {
+    private mapCompletionKindToVsCodeKind(completionKind: number): vscode.CompletionItemKind {
+        switch (completionKind) {
             case 1: // TEXT
                 return vscode.CompletionItemKind.Text;
             case 2: // METHOD
@@ -833,23 +599,10 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Gets the connection manager to use for Perspective completions
-     */
-    private getConnectionManager(): DesignerConnectionManager | null {
-        // Prefer external connection manager (set by ScriptConsoleViewProvider)
-        if (this.externalConnectionManager) {
-            return this.externalConnectionManager;
-        }
-
-        // Fall back to Designer Bridge connection manager
-        return this.designerBridgeService?.getConnectionManager() ?? null;
-    }
-
-    /**
      * Gets completion items including deep search results for partial names
      * Used when searching at root level for functions/classes across all modules
      */
-    async getDeepCompletions(projectId: string, partialName: string): Promise<LspCompletionItem[]> {
+    async getDeepCompletions(projectId: string, partialName: string): Promise<CompletionItem[]> {
         if (!this.scriptModuleIndexService) {
             return [];
         }
@@ -858,7 +611,7 @@ export class PythonCompletionService implements IPythonCompletionService {
         await this.ensureProjectIndexed(projectId);
 
         const partialLower = partialName.toLowerCase();
-        const matchedItems: LspCompletionItem[] = [];
+        const matchedItems: CompletionItem[] = [];
 
         // Check if 'system' module matches
         if ('system'.startsWith(partialLower)) {
@@ -919,7 +672,7 @@ export class PythonCompletionService implements IPythonCompletionService {
             const symbolNameLower = symbol.name.toLowerCase();
 
             if (symbolNameLower.startsWith(partialLower) || symbolNameLower.includes(partialLower)) {
-                const item = this.createSymbolLspItem(symbol, module, partialName, partialLower);
+                const item = this.createSymbolCompletionItem(symbol, module, partialName, partialLower);
                 matchedItems.push(item);
             }
         }
@@ -928,16 +681,16 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Creates an LSP completion item for a symbol
+     * Creates a completion item for a symbol
      */
-    private createSymbolLspItem(
+    private createSymbolCompletionItem(
         symbol: PythonSymbol,
         module: ScriptModule,
         partialName: string,
         partialLower: string
-    ): LspCompletionItem {
+    ): CompletionItem {
         const fullName = `${module.qualifiedPath}.${symbol.name}`;
-        const kind = this.getSymbolLspKind(symbol.type);
+        const kind = this.getSymbolCompletionKind(symbol.type);
 
         let insertText = fullName;
         let insertTextFormat = 1;
@@ -980,9 +733,9 @@ export class PythonCompletionService implements IPythonCompletionService {
     }
 
     /**
-     * Gets LSP kind for a symbol type
+     * Gets completion kind for a symbol type
      */
-    private getSymbolLspKind(symbolType: string): number {
+    private getSymbolCompletionKind(symbolType: string): number {
         switch (symbolType) {
             case 'function':
                 return 3; // Function

@@ -5,6 +5,7 @@
 
 export {
     CompletionScope,
+    type CompletionItem,
     type CompletionRequest,
     type CompletionResponse,
     type IPythonCompletionService,

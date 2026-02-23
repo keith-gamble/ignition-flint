@@ -21,9 +21,7 @@
     "onView:flintProjectBrowser",
     "onLanguage:json",
     "onFileSystem:flint-script",
-    "onFileSystem:flint-conflict",
-    "onDebug:flint",
-    "onDebugResolve:flint"
+    "onFileSystem:flint-conflict"
   ],
   "contributes": {
     "viewsContainers": {
@@ -32,13 +30,6 @@
           "id": "flint",
           "title": "Flint for Ignition",
           "icon": "images/assets/flint-icon-mono.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "flintPanel",
-          "title": "Flint",
-          "icon": "$(terminal)"
         }
       ]
     },
@@ -50,15 +41,6 @@
           "icon": "$(folder-library)",
           "contextualTitle": "Flint Project Browser",
           "visibility": "visible"
-        }
-      ],
-      "flintPanel": [
-        {
-          "id": "flint.scriptConsolePanel",
-          "name": "Script Console",
-          "type": "webview",
-          "icon": "$(terminal)",
-          "contextualTitle": "Ignition Script Console"
         }
       ]
     },
@@ -417,48 +399,6 @@
         "command": "flint.pasteAsJson",
         "title": "Paste as JSON",
         "category": "Flint"
-      },
-      {
-        "command": "flint.sendMessageToDesigner",
-        "title": "Send Message to Designer",
-        "category": "Flint",
-        "icon": "$(comment)"
-      },
-      {
-        "command": "flint.connectToDesigner",
-        "title": "Connect to Designer",
-        "category": "Flint",
-        "icon": "$(plug)"
-      },
-      {
-        "command": "flint.disconnectFromDesigner",
-        "title": "Disconnect from Designer",
-        "category": "Flint",
-        "icon": "$(debug-disconnect)"
-      },
-      {
-        "command": "flint.openScriptConsole",
-        "title": "Open Ignition Script Console",
-        "category": "Flint",
-        "icon": "$(terminal)"
-      },
-      {
-        "command": "flint.runInFlint",
-        "title": "Run in Flint",
-        "category": "Flint",
-        "icon": "$(play)"
-      },
-      {
-        "command": "flint.debugScript",
-        "title": "Debug Ignition Script",
-        "category": "Flint",
-        "icon": "$(debug-start)"
-      },
-      {
-        "command": "flint.openInDesigner",
-        "title": "Open in Designer",
-        "category": "Flint",
-        "icon": "$(link-external)"
       }
     ],
     "menus": {
@@ -551,16 +491,6 @@
           "command": "flint.searchResourcesByType",
           "when": "view == flintProjectBrowser && viewItem == resourceType",
           "group": "2_search@1"
-        },
-        {
-          "command": "flint.openInDesigner",
-          "when": "view == flintProjectBrowser && viewItem == resource",
-          "group": "navigation@1"
-        },
-        {
-          "command": "flint.openInDesigner",
-          "when": "view == flintProjectBrowser && viewItem == pythonScript",
-          "group": "navigation@1"
         },
         {
           "command": "flint.duplicateResource",
@@ -679,11 +609,6 @@
           "when": "resourceExtname == .json",
           "command": "flint.editEmbeddedScript",
           "group": "flint@1"
-        },
-        {
-          "when": "editorLangId == python",
-          "command": "flint.runInFlint",
-          "group": "flint@2"
         }
       ],
       "commandPalette": [
@@ -792,10 +717,6 @@
         {
           "command": "flint.acceptIncomingScript",
           "when": "false"
-        },
-        {
-          "command": "flint.openInDesigner",
-          "when": "false"
         }
       ]
     },
@@ -843,11 +764,6 @@
           "default": true,
           "description": "Enable autocomplete for Ignition Python script modules"
         },
-        "flint.enableDesignerLspCompletion": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Designer LSP completions for system functions (requires connected Designer with Flint Bridge module)"
-        },
         "flint.enableLocalScriptCompletion": {
           "type": "boolean",
           "default": true,
@@ -882,57 +798,6 @@
         }
       }
     },
-    "debuggers": [
-      {
-        "type": "flint",
-        "label": "Flint Ignition Debugger",
-        "languages": ["python"],
-        "configurationAttributes": {
-          "launch": {
-            "required": ["program"],
-            "properties": {
-              "program": {
-                "type": "string",
-                "description": "Path to the Python script to debug",
-                "default": "${file}"
-              },
-              "stopOnEntry": {
-                "type": "boolean",
-                "description": "Stop at entry point",
-                "default": false
-              }
-            }
-          }
-        },
-        "initialConfigurations": [
-          {
-            "type": "flint",
-            "name": "Debug Ignition Script",
-            "request": "launch",
-            "program": "${file}",
-            "stopOnEntry": false
-          }
-        ],
-        "configurationSnippets": [
-          {
-            "label": "Flint: Debug Ignition Script",
-            "description": "Debug an Ignition Python script via Designer",
-            "body": {
-              "type": "flint",
-              "name": "Debug ${1:script}",
-              "request": "launch",
-              "program": "^\"\\${file}\"",
-              "stopOnEntry": false
-            }
-          }
-        ]
-      }
-    ],
-    "breakpoints": [
-      {
-        "language": "python"
-      }
-    ],
     "jsonValidation": [
       {
         "fileMatch": [
@@ -1015,7 +880,6 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^16.18.126",
     "@types/vscode": "^1.102.0",
-    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
     "@vscode/test-cli": "^0.0.12",
@@ -1034,8 +898,7 @@
     "typescript-transform-paths": "^3.5.5"
   },
   "dependencies": {
-    "glob": "^8.1.0",
-    "ws": "^8.19.0"
+    "glob": "^8.1.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

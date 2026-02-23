@@ -3,8 +3,6 @@
  * @description Main Flint extension entry point - Modern service-based architecture
  */
 
-import * as path from 'path';
-
 import * as vscode from 'vscode';
 
 import { CommandRegistry } from '@/commands/base/CommandRegistry';
@@ -41,7 +39,6 @@ import { CreateFolderCommand } from '@/commands/resources/CreateFolderCommand';
 import { CreateResourceCommand } from '@/commands/resources/CreateResourceCommand';
 import { DeleteResourceCommand } from '@/commands/resources/DeleteResourceCommand';
 import { DuplicateResourceCommand } from '@/commands/resources/DuplicateResourceCommand';
-import { OpenInDesignerCommand } from '@/commands/resources/OpenInDesignerCommand';
 import { OpenResourceCommand } from '@/commands/resources/OpenResourceCommand';
 import { RenameResourceCommand } from '@/commands/resources/RenameResourceCommand';
 import { ClearSearchHistoryCommand } from '@/commands/search/ClearSearchHistoryCommand';
@@ -55,10 +52,8 @@ import { FlintError } from '@/core/errors';
 import { ServiceContainer } from '@/core/ServiceContainer';
 import { ResourceOrigin } from '@/core/types/models';
 import { TreeNode, TreeNodeType } from '@/core/types/tree';
-import { FlintDebugAdapterFactory, FlintDebugConfigurationProvider } from '@/debug';
 import { PythonCompletionProvider } from '@/providers/completion/PythonCompletionProvider';
 import { ConflictCodeActionProvider, ConflictCodeLensProvider } from '@/providers/conflict';
-import { ConsoleCodeDocumentProvider } from '@/providers/console/ConsoleCodeDocumentProvider';
 import { ScriptCodeActionProvider } from '@/providers/decode/ScriptCodeActionProvider';
 import { PythonCompletionService } from '@/services/completion';
 import { ConfigMigrationService } from '@/services/config/ConfigMigrationService';
@@ -66,10 +61,8 @@ import { ConfigValidationService } from '@/services/config/ConfigValidationServi
 import { ProjectScannerService } from '@/services/config/ProjectScannerService';
 import { WorkspaceConfigService } from '@/services/config/WorkspaceConfigService';
 import { ConflictDetectionService, ConflictScriptFileSystemService } from '@/services/conflict';
-import { CONSOLE_DOCUMENT_SCHEME, ScriptConsoleDebugService } from '@/services/debug';
 import { DecodedFileSystemService } from '@/services/decode/DecodedFileSystemService';
 import { ScriptFileSystemService } from '@/services/decode/ScriptFileSystemService';
-import { ConnectionState, DesignerBridgeService } from '@/services/designer';
 import { EnvironmentService } from '@/services/environments/EnvironmentService';
 import { GatewayManagerService } from '@/services/gateways/GatewayManagerService';
 import { GatewayScanService } from '@/services/gateways/GatewayScanService';
@@ -82,15 +75,12 @@ import { ResourceValidationService } from '@/services/resources/ResourceValidati
 import { SearchHistoryService } from '@/services/search/SearchHistoryService';
 import { SearchProviderService } from '@/services/search/SearchProviderService';
 import { DesignerLauncherHelper, KindlingHelper } from '@/utils';
-import { ScriptConsoleViewProvider } from '@/views/panel/ScriptConsoleViewProvider';
 import { ProjectTreeDataProvider } from '@/views/projectBrowser/ProjectTreeDataProvider';
 import { TreeStateManager } from '@/views/projectBrowser/TreeStateManager';
-import { DesignerStatusBarItem } from '@/views/statusBar/DesignerStatusBarItem';
 import { EnvironmentStatusBarItem } from '@/views/statusBar/EnvironmentStatusBarItem';
 import { GatewayStatusBarItem } from '@/views/statusBar/GatewayStatusBarItem';
 import { SearchStatusBarItem } from '@/views/statusBar/SearchStatusBarItem';
 import { ConflictMergeWebview } from '@/views/webview/ConflictMergeWebview';
-import { ScriptConsoleWebview } from '@/views/webview/ScriptConsoleWebview';
 import { SetupWizardWebview } from '@/views/webview/SetupWizardWebview';
 
 // Extension state
@@ -350,11 +340,7 @@ export async function deactivate(): Promise<void> {
                 'ConflictDetectionService',
                 'ConflictScriptFileSystemService',
                 'ConflictMergeWebview',
-                'DesignerBridgeService',
-                'PythonCompletionService',
-                'ScriptConsoleWebview',
-                'ScriptConsoleViewProvider',
-                'ScriptConsoleDebugService'
+                'PythonCompletionService'
             ];
 
             for (const serviceName of serviceNames) {
@@ -562,48 +548,11 @@ async function initializeServices(
     const conflictCodeActionProvider = new ConflictCodeActionProvider(serviceContainer);
     context.subscriptions.push(vscode.languages.registerCodeActionsProvider('json', conflictCodeActionProvider));
 
-    // Initialize Designer Bridge service (for connecting to running Designers)
-    const designerBridgeService = new DesignerBridgeService(serviceContainer);
-    serviceContainer.register('DesignerBridgeService', designerBridgeService);
-    await designerBridgeService.initialize();
-    await designerBridgeService.start();
-
-    // Initialize Python Completion service (unified completion logic for .py files and Script Console)
+    // Initialize Python Completion service (unified completion logic for .py files)
     const pythonCompletionService = new PythonCompletionService(serviceContainer);
     serviceContainer.register('PythonCompletionService', pythonCompletionService);
     await pythonCompletionService.initialize();
     await pythonCompletionService.start();
-
-    // Initialize Script Console webview service (requires DesignerBridgeService)
-    const scriptConsoleWebview = new ScriptConsoleWebview(serviceContainer, context);
-    serviceContainer.register('ScriptConsoleWebview', scriptConsoleWebview);
-    await scriptConsoleWebview.initialize();
-    await scriptConsoleWebview.start();
-
-    // Initialize Script Console panel view provider (for bottom panel area)
-    const scriptConsoleViewProvider = new ScriptConsoleViewProvider(serviceContainer, context);
-    serviceContainer.register('ScriptConsoleViewProvider', scriptConsoleViewProvider);
-    await scriptConsoleViewProvider.initialize();
-    await scriptConsoleViewProvider.start();
-
-    // Register the Script Console panel as a webview view
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(ScriptConsoleViewProvider.viewType, scriptConsoleViewProvider, {
-            webviewOptions: { retainContextWhenHidden: true }
-        })
-    );
-
-    // Register the Console Code Document Provider for virtual debugging documents
-    const consoleDocumentProvider = ConsoleCodeDocumentProvider.getInstance();
-    context.subscriptions.push(
-        vscode.workspace.registerTextDocumentContentProvider(CONSOLE_DOCUMENT_SCHEME, consoleDocumentProvider)
-    );
-
-    // Initialize Script Console Debug Service (for VS Code DAP debugging from Script Console)
-    const scriptConsoleDebugService = new ScriptConsoleDebugService(serviceContainer);
-    serviceContainer.register('ScriptConsoleDebugService', scriptConsoleDebugService);
-    await scriptConsoleDebugService.initialize();
-    await scriptConsoleDebugService.start();
 
     return {
         configService,
@@ -652,7 +601,6 @@ function registerCommands(commandRegistry: CommandRegistry, commandContext: any)
         commandRegistry.register(new DuplicateResourceCommand(commandContext));
         commandRegistry.register(new CopyPathCommand(commandContext));
         commandRegistry.register(new OpenResourceCommand(commandContext));
-        commandRegistry.register(new OpenInDesignerCommand(commandContext));
 
         // Resource JSON commands
         commandRegistry.register(new CreateResourceJsonCommand(commandContext));
@@ -846,52 +794,6 @@ async function initializeUI(context: vscode.ExtensionContext, state: ExtensionSt
         await environmentStatusBarItem.start();
         state.statusBarItems.push(environmentStatusBarItem as any);
 
-        // Create Designer status bar item
-        const designerStatusBarItem = new DesignerStatusBarItem(state.serviceContainer, context);
-        await designerStatusBarItem.start();
-        state.statusBarItems.push(designerStatusBarItem as any);
-
-        // Register Designer bridge commands
-        context.subscriptions.push(
-            vscode.commands.registerCommand('flint.sendMessageToDesigner', async () => {
-                const bridgeService = state.serviceContainer.get<DesignerBridgeService>('DesignerBridgeService');
-                await bridgeService.promptAndShowMessage();
-            }),
-            vscode.commands.registerCommand('flint.connectToDesigner', async () => {
-                const bridgeService = state.serviceContainer.get<DesignerBridgeService>('DesignerBridgeService');
-                await bridgeService.selectAndConnect();
-            }),
-            vscode.commands.registerCommand('flint.disconnectFromDesigner', async () => {
-                const bridgeService = state.serviceContainer.get<DesignerBridgeService>('DesignerBridgeService');
-                await bridgeService.disconnect();
-                vscode.window.showInformationMessage('Disconnected from Designer');
-            }),
-            vscode.commands.registerCommand('flint.openScriptConsole', async () => {
-                const scriptConsole = state.serviceContainer.get<ScriptConsoleWebview>('ScriptConsoleWebview');
-                await scriptConsole.openConsole();
-            }),
-            vscode.commands.registerCommand('flint.runInFlint', async () => {
-                const editor = vscode.window.activeTextEditor;
-                if (!editor) {
-                    vscode.window.showErrorMessage('No active editor');
-                    return;
-                }
-
-                const document = editor.document;
-                if (document.languageId !== 'python') {
-                    vscode.window.showErrorMessage('Run in Flint only works with Python files');
-                    return;
-                }
-
-                const code = document.getText();
-                const fileName = path.basename(document.fileName);
-
-                const scriptConsoleProvider =
-                    state.serviceContainer.get<ScriptConsoleViewProvider>('ScriptConsoleViewProvider');
-                await scriptConsoleProvider.runFile(code, fileName);
-            })
-        );
-
         // Register Python completion provider for both regular files and virtual script files
         const pythonCompletionProvider = new PythonCompletionProvider(state.serviceContainer);
         const pythonSelector: vscode.DocumentSelector = [
@@ -906,15 +808,6 @@ async function initializeUI(context: vscode.ExtensionContext, state: ExtensionSt
         );
 
         context.subscriptions.push(pythonCompletionDisposable);
-
-        // Register Flint debug adapter for Python debugging in Ignition
-        const debugAdapterFactory = new FlintDebugAdapterFactory(state.serviceContainer);
-        const debugConfigProvider = new FlintDebugConfigurationProvider(state.serviceContainer);
-
-        context.subscriptions.push(
-            vscode.debug.registerDebugAdapterDescriptorFactory('flint', debugAdapterFactory),
-            vscode.debug.registerDebugConfigurationProvider('flint', debugConfigProvider)
-        );
     } catch (error) {
         throw new FlintError(
             'UI initialization failed',
@@ -1000,13 +893,9 @@ function setupFileWatchers(context: vscode.ExtensionContext, state: ExtensionSta
     projectWatcher.onDidDelete(debouncedRefresh);
 
     // File save handler for project resources
-    // Triggers project scan when files within project paths are saved
+    // Triggers gateway scan when files within project paths are saved
     const fileSaveSubscription = vscode.workspace.onDidSaveTextDocument(async document => {
         const filePath = document.uri.fsPath;
-        const fileName = path.basename(filePath);
-
-        // Check if this is a config file that should trigger scan when connected to designer
-        const isConfigFile = fileName === 'project.json' || fileName === 'flint.config.json';
 
         // Get project paths to check if file is within a project
         let isInProjectPath = false;
@@ -1014,43 +903,19 @@ function setupFileWatchers(context: vscode.ExtensionContext, state: ExtensionSta
             const projectPaths = await state.configService.getProjectPaths();
             isInProjectPath = projectPaths.some(projectPath => filePath.startsWith(projectPath));
         } catch {
-            // Failed to get project paths, continue with config file check
+            // Failed to get project paths
         }
 
-        // Skip if not a project resource and not a config file
-        if (!isInProjectPath && !isConfigFile) {
+        // Skip if not a project resource
+        if (!isInProjectPath) {
             return;
         }
 
         try {
-            // Prefer Designer Bridge scan (direct WebSocket connection)
-            const designerBridgeService = state.serviceContainer.get<DesignerBridgeService>('DesignerBridgeService');
-            const isConnectedToDesigner = designerBridgeService?.getConnectionState() === ConnectionState.CONNECTED;
+            const gatewayScanService = state.serviceContainer.get<GatewayScanService>('GatewayScanService');
 
-            // For config files, only trigger scan if connected to designer
-            if (isConfigFile && !isConnectedToDesigner) {
-                return;
-            }
-
-            if (isConnectedToDesigner) {
-                const connectionManager = designerBridgeService.getConnectionManager();
-                const result = await connectionManager.scanProject();
-                if (result.success) {
-                    console.log('[Flint] Designer project scan complete');
-                    return;
-                }
-                // If Designer scan failed, fall through to Gateway scan
-                console.log('[Flint] Designer project scan failed, falling back to Gateway scan');
-            }
-
-            // Fallback to Gateway HTTP scan (only for non-config files)
-            if (!isConfigFile) {
-                const gatewayScanService = state.serviceContainer.get<GatewayScanService>('GatewayScanService');
-
-                if (gatewayScanService?.scanProject !== undefined) {
-                    // Trigger gateway scan (will show notifications to user)
-                    await gatewayScanService.scanProject();
-                }
+            if (gatewayScanService?.scanProject !== undefined) {
+                await gatewayScanService.scanProject();
             }
         } catch {
             // Silently fail - scan services handle user notifications
